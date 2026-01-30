@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -21,533 +22,549 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
-    // QR Code Generator
-    function generateQRCode(text) {
-      const size = 25;
-      const matrix = Array(size).fill(null).map(() => Array(size).fill(null));
-      const reserved = Array(size).fill(null).map(() => Array(size).fill(false));
-      
-      function addFinderPattern(matrix, reserved, x, y) {
-        for (let dy = -1; dy <= 7; dy++) {
-          for (let dx = -1; dx <= 7; dx++) {
-            const px = x + dx, py = y + dy;
-            if (px < 0 || py < 0 || px >= size || py >= size) continue;
-            reserved[py][px] = true;
-            if (dx === -1 || dx === 7 || dy === -1 || dy === 7) matrix[py][px] = false;
-            else if ((dx === 0 || dx === 6) || (dy === 0 || dy === 6)) matrix[py][px] = true;
-            else if (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4) matrix[py][px] = true;
-            else matrix[py][px] = false;
-          }
-        }
+```
+// QR Code Generator
+function generateQRCode(text) {
+  const size = 25;
+  const matrix = Array(size).fill(null).map(() => Array(size).fill(null));
+  const reserved = Array(size).fill(null).map(() => Array(size).fill(false));
+  
+  function addFinderPattern(matrix, reserved, x, y) {
+    for (let dy = -1; dy <= 7; dy++) {
+      for (let dx = -1; dx <= 7; dx++) {
+        const px = x + dx, py = y + dy;
+        if (px < 0 || py < 0 || px >= size || py >= size) continue;
+        reserved[py][px] = true;
+        if (dx === -1 || dx === 7 || dy === -1 || dy === 7) matrix[py][px] = false;
+        else if ((dx === 0 || dx === 6) || (dy === 0 || dy === 6)) matrix[py][px] = true;
+        else if (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4) matrix[py][px] = true;
+        else matrix[py][px] = false;
       }
-      
-      addFinderPattern(matrix, reserved, 0, 0);
-      addFinderPattern(matrix, reserved, size - 7, 0);
-      addFinderPattern(matrix, reserved, 0, size - 7);
-      
-      const alignPos = 18;
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          reserved[alignPos + dy][alignPos + dx] = true;
-          matrix[alignPos + dy][alignPos + dx] = (Math.abs(dx) === 2 || Math.abs(dy) === 2 || (dx === 0 && dy === 0));
-        }
-      }
-      
-      for (let i = 8; i < size - 8; i++) {
-        reserved[6][i] = reserved[i][6] = true;
-        matrix[6][i] = matrix[i][6] = i % 2 === 0;
-      }
-      
-      reserved[size - 8][8] = true;
-      matrix[size - 8][8] = true;
-      
-      for (let i = 0; i < 9; i++) { reserved[8][i] = reserved[i][8] = true; }
-      for (let i = 0; i < 8; i++) { reserved[8][size - 1 - i] = reserved[size - 1 - i][8] = true; }
-      
-      const bytes = new TextEncoder().encode(text);
-      let bits = '0100' + bytes.length.toString(2).padStart(8, '0');
-      bytes.forEach(b => bits += b.toString(2).padStart(8, '0'));
-      bits += '0000';
-      while (bits.length % 8 !== 0) bits += '0';
-      const capacity = 44 * 8;
-      let padIndex = 0;
-      const padBytes = ['11101100', '00010001'];
-      while (bits.length < capacity) { bits += padBytes[padIndex++ % 2]; }
-      
-      let bitIndex = 0, upward = true;
-      for (let col = size - 1; col >= 1; col -= 2) {
-        if (col === 6) col = 5;
-        for (let row = 0; row < size; row++) {
-          const actualRow = upward ? size - 1 - row : row;
-          for (let c = 0; c < 2; c++) {
-            const x = col - c, y = actualRow;
-            if (!reserved[y][x] && bitIndex < bits.length) matrix[y][x] = bits[bitIndex++] === '1';
-          }
-        }
-        upward = !upward;
-      }
-      
-      const formatBits = '111011111000100';
-      for (let i = 0; i < 6; i++) { matrix[8][i] = formatBits[i] === '1'; matrix[i][8] = formatBits[14 - i] === '1'; }
-      matrix[8][7] = formatBits[6] === '1'; matrix[8][8] = formatBits[7] === '1'; matrix[7][8] = formatBits[8] === '1';
-      for (let i = 0; i < 7; i++) { matrix[8][size - 1 - i] = formatBits[14 - i] === '1'; matrix[size - 1 - i][8] = formatBits[i] === '1'; }
-      matrix[8][size - 8] = formatBits[7] === '1';
-      
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          if (!reserved[y][x] && (x + y) % 2 === 0) matrix[y][x] = !matrix[y][x];
-        }
-      }
-      return matrix;
     }
+  }
+  
+  addFinderPattern(matrix, reserved, 0, 0);
+  addFinderPattern(matrix, reserved, size - 7, 0);
+  addFinderPattern(matrix, reserved, 0, size - 7);
+  
+  const alignPos = 18;
+  for (let dy = -2; dy <= 2; dy++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      reserved[alignPos + dy][alignPos + dx] = true;
+      matrix[alignPos + dy][alignPos + dx] = (Math.abs(dx) === 2 || Math.abs(dy) === 2 || (dx === 0 && dy === 0));
+    }
+  }
+  
+  for (let i = 8; i < size - 8; i++) {
+    reserved[6][i] = reserved[i][6] = true;
+    matrix[6][i] = matrix[i][6] = i % 2 === 0;
+  }
+  
+  reserved[size - 8][8] = true;
+  matrix[size - 8][8] = true;
+  
+  for (let i = 0; i < 9; i++) { reserved[8][i] = reserved[i][8] = true; }
+  for (let i = 0; i < 8; i++) { reserved[8][size - 1 - i] = reserved[size - 1 - i][8] = true; }
+  
+  const bytes = new TextEncoder().encode(text);
+  let bits = '0100' + bytes.length.toString(2).padStart(8, '0');
+  bytes.forEach(b => bits += b.toString(2).padStart(8, '0'));
+  bits += '0000';
+  while (bits.length % 8 !== 0) bits += '0';
+  const capacity = 44 * 8;
+  let padIndex = 0;
+  const padBytes = ['11101100', '00010001'];
+  while (bits.length < capacity) { bits += padBytes[padIndex++ % 2]; }
+  
+  let bitIndex = 0, upward = true;
+  for (let col = size - 1; col >= 1; col -= 2) {
+    if (col === 6) col = 5;
+    for (let row = 0; row < size; row++) {
+      const actualRow = upward ? size - 1 - row : row;
+      for (let c = 0; c < 2; c++) {
+        const x = col - c, y = actualRow;
+        if (!reserved[y][x] && bitIndex < bits.length) matrix[y][x] = bits[bitIndex++] === '1';
+      }
+    }
+    upward = !upward;
+  }
+  
+  const formatBits = '111011111000100';
+  for (let i = 0; i < 6; i++) { matrix[8][i] = formatBits[i] === '1'; matrix[i][8] = formatBits[14 - i] === '1'; }
+  matrix[8][7] = formatBits[6] === '1'; matrix[8][8] = formatBits[7] === '1'; matrix[7][8] = formatBits[8] === '1';
+  for (let i = 0; i < 7; i++) { matrix[8][size - 1 - i] = formatBits[14 - i] === '1'; matrix[size - 1 - i][8] = formatBits[i] === '1'; }
+  matrix[8][size - 8] = formatBits[7] === '1';
+  
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (!reserved[y][x] && (x + y) % 2 === 0) matrix[y][x] = !matrix[y][x];
+    }
+  }
+  return matrix;
+}
 
-    const QRCodeCanvas = ({ value, size = 250 }) => {
-      const canvasRef = useRef(null);
-      useEffect(() => {
-        if (!canvasRef.current || !value) return;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        const qr = generateQRCode(value);
-        const cellSize = size / qr.length;
-        canvas.width = size; canvas.height = size;
-        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = '#000000';
-        qr.forEach((row, y) => row.forEach((cell, x) => {
-          if (cell) ctx.fillRect(Math.floor(x * cellSize), Math.floor(y * cellSize), Math.ceil(cellSize), Math.ceil(cellSize));
-        }));
-      }, [value, size]);
-      return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
-    };
+const QRCodeCanvas = ({ value, size = 250 }) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (!canvasRef.current || !value) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const qr = generateQRCode(value);
+    const cellSize = size / qr.length;
+    canvas.width = size; canvas.height = size;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#000000';
+    qr.forEach((row, y) => row.forEach((cell, x) => {
+      if (cell) ctx.fillRect(Math.floor(x * cellSize), Math.floor(y * cellSize), Math.ceil(cellSize), Math.ceil(cellSize));
+    }));
+  }, [value, size]);
+  return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
+};
 
-    const useAudio = () => {
-      const audioContextRef = useRef(null);
-      const getAudioContext = useCallback(() => {
-        if (!audioContextRef.current || audioContextRef.current.state === 'closed')
-          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
-        return audioContextRef.current;
-      }, []);
-      
-      const playBeep = useCallback((frequency = 880, duration = 0.15, type = 'sine', volume = 0.5) => {
-        try {
-          const ctx = getAudioContext();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.frequency.value = frequency; osc.type = type;
-          gain.gain.setValueAtTime(volume, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration);
-        } catch (e) { console.log('Audio error:', e); }
-      }, [getAudioContext]);
-      
-      return {
-        playStartBeep: useCallback(() => playBeep(1000, 0.6, 'sine', 0.6), [playBeep]),
-        playOneMinuteBeep: useCallback(() => playBeep(880, 0.3, 'sine', 0.5), [playBeep]),
-        playCountdownBeep: useCallback(() => playBeep(660, 0.15, 'sine', 0.5), [playBeep]),
-        playEndBeep: useCallback(() => playBeep(440, 1.0, 'square', 0.4), [playBeep]),
-        getAudioContext
-      };
-    };
+const useAudio = () => {
+  const audioContextRef = useRef(null);
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current || audioContextRef.current.state === 'closed')
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
+    return audioContextRef.current;
+  }, []);
+  
+  const playBeep = useCallback((frequency = 880, duration = 0.15, type = 'sine', volume = 0.5) => {
+    try {
+      const ctx = getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = frequency; osc.type = type;
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration);
+    } catch (e) { console.log('Audio error:', e); }
+  }, [getAudioContext]);
+  
+  return {
+    playStartBeep: useCallback(() => playBeep(1000, 0.6, 'sine', 0.6), [playBeep]),
+    playOneMinuteBeep: useCallback(() => playBeep(880, 0.3, 'sine', 0.5), [playBeep]),
+    playCountdownBeep: useCallback(() => playBeep(660, 0.15, 'sine', 0.5), [playBeep]),
+    playEndBeep: useCallback(() => playBeep(440, 1.0, 'square', 0.4), [playBeep]),
+    getAudioContext
+  };
+};
 
-    // Icons
-    const PlayIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
-    const PauseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
-    const ResetIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
-    const SkipIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>;
-    const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
-    const QRIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>;
-    const VolumeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>;
-    const MuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>;
-    const SyncIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>;
-    const CopyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
-    const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
+// Icons
+const PlayIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+const PauseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
+const ResetIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+const SkipIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>;
+const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>;
+const QRIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>;
+const VolumeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>;
+const MuteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>;
+const SyncIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>;
+const CopyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
 
-    function ClimbingTimer() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const isDisplayMode = urlParams.get('d') === '1';
-      const syncStart = urlParams.get('s') ? parseInt(urlParams.get('s')) : null;
-      const syncPhase = urlParams.get('p') || 'climb';
-      const syncClimb = urlParams.get('c') ? parseInt(urlParams.get('c')) : 240;
-      const syncTrans = urlParams.get('t') ? parseInt(urlParams.get('t')) : 30;
-      const syncRound = urlParams.get('r') ? parseInt(urlParams.get('r')) : 1;
+function ClimbingTimer() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDisplayMode = urlParams.get('d') === '1';
+  const syncStart = urlParams.get('s') ? parseInt(urlParams.get('s')) : null;
+  const syncPhase = urlParams.get('p') || 'climb';
+  const syncClimb = urlParams.get('c') ? parseInt(urlParams.get('c')) : 240;
+  const syncTrans = urlParams.get('t') ? parseInt(urlParams.get('t')) : 30;
+  const syncRound = urlParams.get('r') ? parseInt(urlParams.get('r')) : 1;
+  
+  const [settings, setSettings] = useState({ climbDuration: syncClimb, transitionDuration: syncTrans });
+  const [isRunning, setIsRunning] = useState(false);
+  const [phase, setPhase] = useState(isDisplayMode ? syncPhase : 'idle');
+  const [timeRemaining, setTimeRemaining] = useState(settings.climbDuration);
+  const [round, setRound] = useState(syncRound);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(!isDisplayMode);
+  const [copied, setCopied] = useState(false);
+  const [showManualSync, setShowManualSync] = useState(false);
+  const [manualSyncInput, setManualSyncInput] = useState('');
+  
+  const phaseStartRef = useRef(syncStart);
+  const lastSecondRef = useRef(null);
+  const phaseRef = useRef(phase);
+  const roundRef = useRef(round);
+  
+  const { playStartBeep, playOneMinuteBeep, playCountdownBeep, playEndBeep, getAudioContext } = useAudio();
+  
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { roundRef.current = round; }, [round]);
+  
+  const formatTime = (seconds) => {
+    const mins = Math.floor(Math.abs(seconds) / 60);
+    const secs = Math.abs(seconds) % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  const getSyncUrl = useCallback(() => {
+    if (!phaseStartRef.current) return '';
+    const base = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams({
+      d: '1', s: phaseStartRef.current.toString(), p: phaseRef.current,
+      c: settings.climbDuration.toString(), t: settings.transitionDuration.toString(), r: roundRef.current.toString()
+    });
+    return `${base}?${params.toString()}`;
+  }, [settings]);
+  
+  const getSyncCode = useCallback(() => {
+    if (!phaseStartRef.current) return '';
+    const data = { s: phaseStartRef.current, p: phaseRef.current === 'climb' ? 0 : 1, c: settings.climbDuration, t: settings.transitionDuration, r: roundRef.current };
+    return btoa(JSON.stringify(data)).replace(/=/g, '');
+  }, [settings]);
+  
+  const applySyncCode = (code) => {
+    try {
+      const padded = code + '=='.slice(0, (4 - code.length % 4) % 4);
+      const data = JSON.parse(atob(padded));
+      phaseStartRef.current = data.s;
+      setPhase(data.p === 0 ? 'climb' : 'transition');
+      setSettings({ climbDuration: data.c, transitionDuration: data.t });
+      setRound(data.r);
+      setIsRunning(true);
+      setShowManualSync(false);
+      return true;
+    } catch (e) { alert('Invalid sync code'); return false; }
+  };
+  
+  useEffect(() => {
+    if (isDisplayMode && syncStart) { phaseStartRef.current = syncStart; setIsRunning(true); }
+  }, []);
+  
+  useEffect(() => {
+    if (!isRunning || !phaseStartRef.current) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const duration = phaseRef.current === 'climb' ? settings.climbDuration : settings.transitionDuration;
+      const elapsed = Math.floor((now - phaseStartRef.current) / 1000);
+      const remaining = Math.max(0, duration - elapsed);
+      setTimeRemaining(remaining);
       
-      const [settings, setSettings] = useState({ climbDuration: syncClimb, transitionDuration: syncTrans });
-      const [isRunning, setIsRunning] = useState(false);
-      const [phase, setPhase] = useState(isDisplayMode ? syncPhase : 'idle');
-      const [timeRemaining, setTimeRemaining] = useState(settings.climbDuration);
-      const [round, setRound] = useState(syncRound);
-      const [showSettings, setShowSettings] = useState(false);
-      const [showQR, setShowQR] = useState(false);
-      const [soundEnabled, setSoundEnabled] = useState(!isDisplayMode);
-      const [copied, setCopied] = useState(false);
-      const [showManualSync, setShowManualSync] = useState(false);
-      const [manualSyncInput, setManualSyncInput] = useState('');
+      if (soundEnabled && remaining !== lastSecondRef.current && lastSecondRef.current !== null) {
+        const prev = lastSecondRef.current;
+        if (phaseRef.current === 'climb') {
+          if (remaining === 60 && prev > 60) playOneMinuteBeep();
+          if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
+          if (remaining === 0 && prev > 0) playEndBeep();
+        } else {
+          if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
+          if (remaining === 0 && prev > 0) playStartBeep();
+        }
+      }
+      lastSecondRef.current = remaining;
       
-      const phaseStartRef = useRef(syncStart);
-      const lastSecondRef = useRef(null);
-      const phaseRef = useRef(phase);
-      const roundRef = useRef(round);
-      
-      const { playStartBeep, playOneMinuteBeep, playCountdownBeep, playEndBeep, getAudioContext } = useAudio();
-      
-      useEffect(() => { phaseRef.current = phase; }, [phase]);
-      useEffect(() => { roundRef.current = round; }, [round]);
-      
-      const formatTime = (seconds) => {
-        const mins = Math.floor(Math.abs(seconds) / 60);
-        const secs = Math.abs(seconds) % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-      };
-      
-      const getSyncUrl = useCallback(() => {
-        if (!phaseStartRef.current) return '';
-        const base = window.location.origin + window.location.pathname;
-        const params = new URLSearchParams({
-          d: '1', s: phaseStartRef.current.toString(), p: phaseRef.current,
-          c: settings.climbDuration.toString(), t: settings.transitionDuration.toString(), r: roundRef.current.toString()
-        });
-        return `${base}?${params.toString()}`;
-      }, [settings]);
-      
-      const getSyncCode = useCallback(() => {
-        if (!phaseStartRef.current) return '';
-        const data = { s: phaseStartRef.current, p: phaseRef.current === 'climb' ? 0 : 1, c: settings.climbDuration, t: settings.transitionDuration, r: roundRef.current };
-        return btoa(JSON.stringify(data)).replace(/=/g, '');
-      }, [settings]);
-      
-      const applySyncCode = (code) => {
-        try {
-          const padded = code + '=='.slice(0, (4 - code.length % 4) % 4);
-          const data = JSON.parse(atob(padded));
-          phaseStartRef.current = data.s;
-          setPhase(data.p === 0 ? 'climb' : 'transition');
-          setSettings({ climbDuration: data.c, transitionDuration: data.t });
-          setRound(data.r);
-          setIsRunning(true);
-          setShowManualSync(false);
-          return true;
-        } catch (e) { alert('Invalid sync code'); return false; }
-      };
-      
-      useEffect(() => {
-        if (isDisplayMode && syncStart) { phaseStartRef.current = syncStart; setIsRunning(true); }
-      }, []);
-      
-      useEffect(() => {
-        if (!isRunning || !phaseStartRef.current) return;
-        const interval = setInterval(() => {
-          const now = Date.now();
-          const duration = phaseRef.current === 'climb' ? settings.climbDuration : settings.transitionDuration;
-          const elapsed = Math.floor((now - phaseStartRef.current) / 1000);
-          const remaining = Math.max(0, duration - elapsed);
-          setTimeRemaining(remaining);
-          
-          if (soundEnabled && remaining !== lastSecondRef.current && lastSecondRef.current !== null) {
-            const prev = lastSecondRef.current;
-            if (phaseRef.current === 'climb') {
-              if (remaining === 60 && prev > 60) playOneMinuteBeep();
-              if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
-              if (remaining === 0 && prev > 0) playEndBeep();
-            } else {
-              if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
-              if (remaining === 0 && prev > 0) playStartBeep();
-            }
+      if (remaining === 0 && elapsed >= duration) {
+        const transitionTime = phaseStartRef.current + duration * 1000;
+        phaseStartRef.current = transitionTime;
+        if (phaseRef.current === 'climb') {
+          // Skip transition if duration is 0
+          if (settings.transitionDuration === 0) {
+            setRound(r => r + 1); roundRef.current += 1;
+            lastSecondRef.current = settings.climbDuration;
+            if (soundEnabled) playStartBeep();
+          } else {
+            setPhase('transition'); phaseRef.current = 'transition'; lastSecondRef.current = settings.transitionDuration;
           }
-          lastSecondRef.current = remaining;
-          
-          if (remaining === 0 && elapsed >= duration) {
-            const transitionTime = phaseStartRef.current + duration * 1000;
-            phaseStartRef.current = transitionTime;
-            if (phaseRef.current === 'climb') {
-              setPhase('transition'); phaseRef.current = 'transition'; lastSecondRef.current = settings.transitionDuration;
-            } else {
-              setPhase('climb'); phaseRef.current = 'climb';
-              setRound(r => r + 1); roundRef.current += 1; lastSecondRef.current = settings.climbDuration;
-            }
-          }
-        }, 50);
-        return () => clearInterval(interval);
-      }, [isRunning, settings, soundEnabled, playOneMinuteBeep, playCountdownBeep, playEndBeep, playStartBeep]);
-      
-      const handleStart = () => {
-        getAudioContext();
-        const now = Date.now();
-        if (phase === 'idle') { setPhase('climb'); phaseRef.current = 'climb'; setTimeRemaining(settings.climbDuration); lastSecondRef.current = settings.climbDuration; }
-        phaseStartRef.current = now;
-        setIsRunning(true);
-        if (soundEnabled) playStartBeep();
-      };
-      
-      const handlePause = () => setIsRunning(false);
-      
-      const handleReset = () => {
-        setIsRunning(false); setPhase('idle'); phaseRef.current = 'idle';
-        setTimeRemaining(settings.climbDuration); setRound(1); roundRef.current = 1;
-        phaseStartRef.current = null; lastSecondRef.current = null;
-      };
-      
-      const handleSkip = () => {
-        const now = Date.now();
-        phaseStartRef.current = now;
-        if (phase === 'climb') {
-          setPhase('transition'); phaseRef.current = 'transition';
-          setTimeRemaining(settings.transitionDuration); lastSecondRef.current = settings.transitionDuration;
         } else {
           setPhase('climb'); phaseRef.current = 'climb';
-          setRound(r => r + 1); roundRef.current += 1;
-          setTimeRemaining(settings.climbDuration); lastSecondRef.current = settings.climbDuration;
+          setRound(r => r + 1); roundRef.current += 1; lastSecondRef.current = settings.climbDuration;
         }
-      };
-      
-      const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      };
-      
-      const getPhaseColor = () => {
-        if (phase === 'idle') return 'linear-gradient(135deg, #334155 0%, #0f172a 100%)';
-        if (phase === 'climb') return 'linear-gradient(135deg, #059669 0%, #064e3b 100%)';
-        return 'linear-gradient(135deg, #f59e0b 0%, #c2410c 100%)';
-      };
-      
-      const getTimeColor = () => {
-        if (timeRemaining <= 5 && timeRemaining > 0) return '#f87171';
-        if (timeRemaining <= 60 && phase === 'climb') return '#fde047';
-        return 'white';
-      };
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [isRunning, settings, soundEnabled, playOneMinuteBeep, playCountdownBeep, playEndBeep, playStartBeep]);
+  
+  const handleStart = () => {
+    getAudioContext();
+    const now = Date.now();
+    if (phase === 'idle') { setPhase('climb'); phaseRef.current = 'climb'; setTimeRemaining(settings.climbDuration); lastSecondRef.current = settings.climbDuration; }
+    phaseStartRef.current = now;
+    setIsRunning(true);
+    if (soundEnabled) playStartBeep();
+  };
+  
+  const handlePause = () => setIsRunning(false);
+  
+  const handleReset = () => {
+    setIsRunning(false); setPhase('idle'); phaseRef.current = 'idle';
+    setTimeRemaining(settings.climbDuration); setRound(1); roundRef.current = 1;
+    phaseStartRef.current = null; lastSecondRef.current = null;
+  };
+  
+  const handleSkip = () => {
+    const now = Date.now();
+    phaseStartRef.current = now;
+    if (phase === 'climb') {
+      // Skip to next climb if transition is 0, otherwise go to transition
+      if (settings.transitionDuration === 0) {
+        setRound(r => r + 1); roundRef.current += 1;
+        setTimeRemaining(settings.climbDuration); lastSecondRef.current = settings.climbDuration;
+      } else {
+        setPhase('transition'); phaseRef.current = 'transition';
+        setTimeRemaining(settings.transitionDuration); lastSecondRef.current = settings.transitionDuration;
+      }
+    } else {
+      setPhase('climb'); phaseRef.current = 'climb';
+      setRound(r => r + 1); roundRef.current += 1;
+      setTimeRemaining(settings.climbDuration); lastSecondRef.current = settings.climbDuration;
+    }
+  };
+  
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  const getPhaseColor = () => {
+    if (phase === 'idle') return 'linear-gradient(135deg, #334155 0%, #0f172a 100%)';
+    if (phase === 'climb') return 'linear-gradient(135deg, #059669 0%, #064e3b 100%)';
+    return 'linear-gradient(135deg, #f59e0b 0%, #c2410c 100%)';
+  };
+  
+  const getTimeColor = () => {
+    if (timeRemaining <= 5 && timeRemaining > 0) return '#f87171';
+    if (timeRemaining <= 60 && phase === 'climb') return '#fde047';
+    return 'white';
+  };
 
-      const syncUrl = getSyncUrl();
-      const syncCode = getSyncCode();
+  const syncUrl = getSyncUrl();
+  const syncCode = getSyncCode();
 
-      return (
-        <div style={{ minHeight: '100vh', background: getPhaseColor(), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem', transition: 'background 0.7s' }}>
-          {/* Header */}
-          <div style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.25rem', fontWeight: 'bold' }}>Round {round}</span>
-              {isDisplayMode && (
-                <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.2)', borderRadius: '9999px', color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <SyncIcon /> Synced Display
-                </span>
-              )}
-            </div>
-            {!isDisplayMode && (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => { getAudioContext(); setSoundEnabled(!soundEnabled); }} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>
-                  {soundEnabled ? <VolumeIcon /> : <MuteIcon />}
-                </button>
-                <button onClick={() => setShowSettings(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>
-                  <SettingsIcon />
-                </button>
-                <button onClick={() => setShowQR(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>
-                  <QRIcon />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Phase Label */}
-          <div style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: 'rgba(255,255,255,0.9)' }}>
-            {phase === 'idle' ? 'Ready' : phase === 'climb' ? '🧗 CLIMB' : '🔄 TRANSITION'}
-          </div>
-
-          {/* Timer */}
-          <div className="tabular-nums" style={{ fontSize: 'clamp(5rem, 25vw, 14rem)', fontFamily: 'ui-monospace, monospace', fontWeight: 'bold', color: getTimeColor(), lineHeight: 1, transition: 'color 0.3s', animation: timeRemaining <= 5 && timeRemaining > 0 ? 'pulse 1s infinite' : 'none' }}>
-            {formatTime(timeRemaining)}
-          </div>
-
-          {/* Subtext */}
-          <div style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem' }}>
-            {phase === 'idle' && `${formatTime(settings.climbDuration)} climb • ${formatTime(settings.transitionDuration)} transition`}
-            {phase === 'climb' && `Transition begins when timer ends`}
-            {phase === 'transition' && `Climb ${round + 1} starts when timer ends`}
-          </div>
-
-          {/* Controls */}
-          {!isDisplayMode && (
-            <div style={{ marginTop: '2.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem' }}>
-              {!isRunning ? (
-                <button onClick={handleStart} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1.25rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600', cursor: 'pointer' }}>
-                  <PlayIcon /> {phase === 'idle' ? 'Start' : 'Resume'}
-                </button>
-              ) : (
-                <button onClick={handlePause} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1.25rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600', cursor: 'pointer' }}>
-                  <PauseIcon /> Pause
-                </button>
-              )}
-              {phase !== 'idle' && (
-                <>
-                  <button onClick={handleSkip} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1.25rem 2rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem', cursor: 'pointer' }}>
-                    <SkipIcon /> Skip
-                  </button>
-                  <button onClick={handleReset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1.25rem 2rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem', cursor: 'pointer' }}>
-                    <ResetIcon /> Reset
-                  </button>
-                </>
-              )}
-            </div>
+  return (
+    <div style={{ minHeight: '100vh', background: getPhaseColor(), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem', transition: 'background 0.7s' }}>
+      {/* Header */}
+      <div style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.25rem', fontWeight: 'bold' }}>Round {round}</span>
+          {isDisplayMode && (
+            <span style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.2)', borderRadius: '9999px', color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <SyncIcon /> Synced Display
+            </span>
           )}
+        </div>
+        {!isDisplayMode && (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={() => { getAudioContext(); setSoundEnabled(!soundEnabled); }} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>
+              {soundEnabled ? <VolumeIcon /> : <MuteIcon />}
+            </button>
+            <button onClick={() => setShowSettings(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>
+              <SettingsIcon />
+            </button>
+            <button onClick={() => setShowQR(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>
+              <QRIcon />
+            </button>
+          </div>
+        )}
+      </div>
 
-          {/* Manual Sync Link */}
-          {!isDisplayMode && phase === 'idle' && (
-            <button onClick={() => setShowManualSync(true)} style={{ marginTop: '1.5rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', textDecoration: 'underline', cursor: 'pointer' }}>
-              Join existing timer with sync code
+      {/* Phase Label */}
+      <div style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: 'rgba(255,255,255,0.9)' }}>
+        {phase === 'idle' ? 'Ready' : phase === 'climb' ? '🧗 CLIMB' : '🔄 TRANSITION'}
+      </div>
+
+      {/* Timer */}
+      <div className="tabular-nums" style={{ fontSize: 'clamp(5rem, 25vw, 14rem)', fontFamily: 'ui-monospace, monospace', fontWeight: 'bold', color: getTimeColor(), lineHeight: 1, transition: 'color 0.3s', animation: timeRemaining <= 5 && timeRemaining > 0 ? 'pulse 1s infinite' : 'none' }}>
+        {formatTime(timeRemaining)}
+      </div>
+
+      {/* Subtext */}
+      <div style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem' }}>
+        {phase === 'idle' && (settings.transitionDuration === 0 ? `${formatTime(settings.climbDuration)} climb • no transition` : `${formatTime(settings.climbDuration)} climb • ${formatTime(settings.transitionDuration)} transition`)}
+        {phase === 'climb' && `Transition begins when timer ends`}
+        {phase === 'transition' && `Climb ${round + 1} starts when timer ends`}
+      </div>
+
+      {/* Controls */}
+      {!isDisplayMode && (
+        <div style={{ marginTop: '2.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem' }}>
+          {!isRunning ? (
+            <button onClick={handleStart} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1.25rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600', cursor: 'pointer' }}>
+              <PlayIcon /> {phase === 'idle' ? 'Start' : 'Resume'}
+            </button>
+          ) : (
+            <button onClick={handlePause} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1.25rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600', cursor: 'pointer' }}>
+              <PauseIcon /> Pause
             </button>
           )}
-
-          {/* Settings Modal */}
-          {showSettings && (
-            <div onClick={() => setShowSettings(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
-              <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', borderRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '28rem' }}>
-                <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: 'white', marginBottom: '2rem' }}>Settings</h2>
-                
-                <div style={{ marginBottom: '2rem' }}>
-                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1.125rem' }}>Climb Duration</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <input type="range" min="60" max="600" step="30" value={settings.climbDuration}
-                      onChange={(e) => setSettings(s => ({ ...s, climbDuration: parseInt(e.target.value) }))}
-                      style={{ flex: 1, height: '0.5rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.2)' }}
-                    />
-                    <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.5rem', width: '5rem', textAlign: 'right' }}>{formatTime(settings.climbDuration)}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                    {[180, 240, 300, 360].map(t => (
-                      <button key={t} onClick={() => setSettings(s => ({ ...s, climbDuration: t }))}
-                        style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', border: 'none', cursor: 'pointer', background: settings.climbDuration === t ? '#059669' : 'rgba(255,255,255,0.1)', color: settings.climbDuration === t ? 'white' : 'rgba(255,255,255,0.7)' }}>
-                        {formatTime(t)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div style={{ marginBottom: '2rem' }}>
-                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1.125rem' }}>Transition Duration</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <input type="range" min="10" max="120" step="5" value={settings.transitionDuration}
-                      onChange={(e) => setSettings(s => ({ ...s, transitionDuration: parseInt(e.target.value) }))}
-                      style={{ flex: 1, height: '0.5rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.2)' }}
-                    />
-                    <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.5rem', width: '5rem', textAlign: 'right' }}>{formatTime(settings.transitionDuration)}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                    {[15, 30, 45, 60].map(t => (
-                      <button key={t} onClick={() => setSettings(s => ({ ...s, transitionDuration: t }))}
-                        style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', border: 'none', cursor: 'pointer', background: settings.transitionDuration === t ? '#d97706' : 'rgba(255,255,255,0.1)', color: settings.transitionDuration === t ? 'white' : 'rgba(255,255,255,0.7)' }}>
-                        {formatTime(t)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => { setShowSettings(false); if (phase === 'idle') setTimeRemaining(settings.climbDuration); }}
-                    style={{ padding: '0.75rem 2rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '1.125rem', fontWeight: '600', cursor: 'pointer' }}>
-                    Done
-                  </button>
-                </div>
-              </div>
-            </div>
+          {phase !== 'idle' && (
+            <>
+              <button onClick={handleSkip} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1.25rem 2rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem', cursor: 'pointer' }}>
+                <SkipIcon /> Skip
+              </button>
+              <button onClick={handleReset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1.25rem 2rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem', cursor: 'pointer' }}>
+                <ResetIcon /> Reset
+              </button>
+            </>
           )}
+        </div>
+      )}
 
-          {/* QR Modal */}
-          {showQR && (
-            <div onClick={() => setShowQR(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
-              <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', borderRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '28rem', maxHeight: '90vh', overflowY: 'auto' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Sync Another Display</h2>
-                
-                {!isRunning || phase === 'idle' ? (
-                  <div style={{ background: 'rgba(51,65,85,0.5)', borderRadius: '1rem', padding: '2rem', textAlign: 'center', marginTop: '1rem' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.125rem', marginBottom: '1rem' }}>Start the timer first to generate sync codes</p>
-                    <button onClick={() => { setShowQR(false); handleStart(); }}
-                      style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
-                      Start Timer
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Scan QR code or enter the sync code on another device</p>
-                    
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <QRCodeCanvas value={syncUrl} size={220} />
-                    </div>
-                    
-                    <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(51,65,85,0.5)', borderRadius: '0.75rem' }}>
-                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Sync Code (for manual entry):</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <code style={{ flex: 1, background: '#0f172a', borderRadius: '0.5rem', padding: '0.75rem 1rem', color: '#34d399', fontFamily: 'monospace', fontSize: '1.125rem', letterSpacing: '0.05em', wordBreak: 'break-all' }}>
-                          {syncCode}
-                        </code>
-                        <button onClick={() => copyToClipboard(syncCode)}
-                          style={{ padding: '0.75rem', background: '#059669', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                          {copied ? <CheckIcon /> : <CopyIcon />}
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div style={{ marginTop: '1rem' }}>
-                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Or copy full URL:</p>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="text" value={syncUrl} readOnly
-                          style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', color: 'white', fontSize: '0.75rem', fontFamily: 'monospace' }}
-                        />
-                        <button onClick={() => copyToClipboard(syncUrl)}
-                          style={{ padding: '0.5rem 1rem', background: '#059669', border: 'none', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}>
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>
-                      💡 The synced display calculates time from the same start point, keeping them in sync automatically.
-                    </p>
-                  </>
-                )}
-                
-                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowQR(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Manual Sync Link */}
+      {!isDisplayMode && phase === 'idle' && (
+        <button onClick={() => setShowManualSync(true)} style={{ marginTop: '1.5rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', textDecoration: 'underline', cursor: 'pointer' }}>
+          Join existing timer with sync code
+        </button>
+      )}
 
-          {/* Manual Sync Modal */}
-          {showManualSync && (
-            <div onClick={() => setShowManualSync(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
-              <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', borderRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '24rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Join Timer</h2>
-                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Enter the sync code from the main timer</p>
-                
-                <input type="text" value={manualSyncInput} onChange={(e) => setManualSyncInput(e.target.value.trim())}
-                  placeholder="Paste sync code here"
-                  style={{ width: '100%', background: '#334155', border: 'none', borderRadius: '0.75rem', padding: '1rem', color: 'white', fontFamily: 'monospace', fontSize: '1.125rem' }}
-                  autoFocus
+      {/* Settings Modal */}
+      {showSettings && (
+        <div onClick={() => setShowSettings(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', borderRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '28rem' }}>
+            <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: 'white', marginBottom: '2rem' }}>Settings</h2>
+            
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1.125rem' }}>Climb Duration</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <input type="range" min="60" max="600" step="30" value={settings.climbDuration}
+                  onChange={(e) => setSettings(s => ({ ...s, climbDuration: parseInt(e.target.value) }))}
+                  style={{ flex: 1, height: '0.5rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.2)' }}
                 />
-                
-                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowManualSync(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
-                    Cancel
+                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.5rem', width: '5rem', textAlign: 'right' }}>{formatTime(settings.climbDuration)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                {[180, 240, 300, 360].map(t => (
+                  <button key={t} onClick={() => setSettings(s => ({ ...s, climbDuration: t }))}
+                    style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', border: 'none', cursor: 'pointer', background: settings.climbDuration === t ? '#059669' : 'rgba(255,255,255,0.1)', color: settings.climbDuration === t ? 'white' : 'rgba(255,255,255,0.7)' }}>
+                    {formatTime(t)}
                   </button>
-                  <button onClick={() => applySyncCode(manualSyncInput)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
-                    Sync
-                  </button>
-                </div>
+                ))}
               </div>
             </div>
-          )}
-
-          {/* Footer */}
-          <div style={{ position: 'absolute', bottom: '1rem', color: 'rgba(255,255,255,0.3)', fontSize: '0.875rem', fontWeight: '500' }}>
-            Three Rivers Rumble • Competition Timer
+            
+            <div style={{ marginBottom: '2rem' }}>
+              <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1.125rem' }}>Transition Duration</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <input type="range" min="0" max="120" step="5" value={settings.transitionDuration}
+                  onChange={(e) => setSettings(s => ({ ...s, transitionDuration: parseInt(e.target.value) }))}
+                  style={{ flex: 1, height: '0.5rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.2)' }}
+                />
+                <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.5rem', width: '5rem', textAlign: 'right' }}>{formatTime(settings.transitionDuration)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                {[0, 15, 30, 45, 60].map(t => (
+                  <button key={t} onClick={() => setSettings(s => ({ ...s, transitionDuration: t }))}
+                    style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', border: 'none', cursor: 'pointer', background: settings.transitionDuration === t ? '#d97706' : 'rgba(255,255,255,0.1)', color: settings.transitionDuration === t ? 'white' : 'rgba(255,255,255,0.7)' }}>
+                    {t === 0 ? 'None' : formatTime(t)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowSettings(false); if (phase === 'idle') setTimeRemaining(settings.climbDuration); }}
+                style={{ padding: '0.75rem 2rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '1.125rem', fontWeight: '600', cursor: 'pointer' }}>
+                Done
+              </button>
+            </div>
           </div>
         </div>
-      );
-    }
+      )}
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<ClimbingTimer />);
+      {/* QR Modal */}
+      {showQR && (
+        <div onClick={() => setShowQR(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', borderRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '28rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Sync Another Display</h2>
+            
+            {!isRunning || phase === 'idle' ? (
+              <div style={{ background: 'rgba(51,65,85,0.5)', borderRadius: '1rem', padding: '2rem', textAlign: 'center', marginTop: '1rem' }}>
+                <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.125rem', marginBottom: '1rem' }}>Start the timer first to generate sync codes</p>
+                <button onClick={() => { setShowQR(false); handleStart(); }}
+                  style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
+                  Start Timer
+                </button>
+              </div>
+            ) : (
+              <>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Scan QR code or enter the sync code on another device</p>
+                
+                <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <QRCodeCanvas value={syncUrl} size={220} />
+                </div>
+                
+                <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(51,65,85,0.5)', borderRadius: '0.75rem' }}>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Sync Code (for manual entry):</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <code style={{ flex: 1, background: '#0f172a', borderRadius: '0.5rem', padding: '0.75rem 1rem', color: '#34d399', fontFamily: 'monospace', fontSize: '1.125rem', letterSpacing: '0.05em', wordBreak: 'break-all' }}>
+                      {syncCode}
+                    </code>
+                    <button onClick={() => copyToClipboard(syncCode)}
+                      style={{ padding: '0.75rem', background: '#059669', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                      {copied ? <CheckIcon /> : <CopyIcon />}
+                    </button>
+                  </div>
+                </div>
+                
+                <div style={{ marginTop: '1rem' }}>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Or copy full URL:</p>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="text" value={syncUrl} readOnly
+                      style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', color: 'white', fontSize: '0.75rem', fontFamily: 'monospace' }}
+                    />
+                    <button onClick={() => copyToClipboard(syncUrl)}
+                      style={{ padding: '0.5rem 1rem', background: '#059669', border: 'none', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                
+                <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>
+                  💡 The synced display calculates time from the same start point, keeping them in sync automatically.
+                </p>
+              </>
+            )}
+            
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowQR(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Sync Modal */}
+      {showManualSync && (
+        <div onClick={() => setShowManualSync(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1e293b', borderRadius: '1.5rem', padding: '2rem', width: '100%', maxWidth: '24rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Join Timer</h2>
+            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Enter the sync code from the main timer</p>
+            
+            <input type="text" value={manualSyncInput} onChange={(e) => setManualSyncInput(e.target.value.trim())}
+              placeholder="Paste sync code here"
+              style={{ width: '100%', background: '#334155', border: 'none', borderRadius: '0.75rem', padding: '1rem', color: 'white', fontFamily: 'monospace', fontSize: '1.125rem' }}
+              autoFocus
+            />
+            
+            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowManualSync(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => applySyncCode(manualSyncInput)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
+                Sync
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{ position: 'absolute', bottom: '1rem', color: 'rgba(255,255,255,0.3)', fontSize: '0.875rem', fontWeight: '500' }}>
+        Three Rivers Rumble • Competition Timer
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ClimbingTimer />);
+```
+
   </script>
 </body>
 </html>
