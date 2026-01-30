@@ -139,11 +139,27 @@
         } catch (e) {}
       }, [getAudioContext]);
       
+      // USA Climbing style: beep beep beep beeeep
+      const playEndSequence = useCallback(() => {
+        playBeep(880, 0.15, 'sine', 0.6);
+        setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 200);
+        setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 400);
+        setTimeout(() => playBeep(880, 0.8, 'sine', 0.6), 600);
+      }, [playBeep]);
+      
+      // USA Climbing style start: beep beep beep beeeep (higher pitch)
+      const playStartSequence = useCallback(() => {
+        playBeep(1000, 0.15, 'sine', 0.6);
+        setTimeout(() => playBeep(1000, 0.15, 'sine', 0.6), 200);
+        setTimeout(() => playBeep(1000, 0.15, 'sine', 0.6), 400);
+        setTimeout(() => playBeep(1000, 0.8, 'sine', 0.6), 600);
+      }, [playBeep]);
+      
       return {
-        playStartBeep: useCallback(() => playBeep(1000, 0.6, 'sine', 0.6), [playBeep]),
+        playStartBeep: useCallback(() => playStartSequence(), [playStartSequence]),
         playOneMinuteBeep: useCallback(() => { playBeep(880, 0.15); setTimeout(() => playBeep(880, 0.15), 200); }, [playBeep]),
         playCountdownBeep: useCallback(() => playBeep(660, 0.15, 'sine', 0.5), [playBeep]),
-        playEndBeep: useCallback(() => playBeep(440, 1.0, 'square', 0.4), [playBeep]),
+        playEndBeep: useCallback(() => playEndSequence(), [playEndSequence]),
         playAlertBeep: useCallback(() => playBeep(550, 0.3, 'sine', 0.5), [playBeep]),
         getAudioContext
       };
