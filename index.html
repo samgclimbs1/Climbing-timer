@@ -139,27 +139,14 @@
         } catch (e) {}
       }, [getAudioContext]);
       
-      // USA Climbing style: beep beep beep beeeep
-      const playEndSequence = useCallback(() => {
-        playBeep(880, 0.15, 'sine', 0.6);
-        setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 200);
-        setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 400);
-        setTimeout(() => playBeep(880, 0.8, 'sine', 0.6), 600);
-      }, [playBeep]);
-      
-      // USA Climbing style start: beep beep beep beeeep (higher pitch)
-      const playStartSequence = useCallback(() => {
-        playBeep(1000, 0.15, 'sine', 0.6);
-        setTimeout(() => playBeep(1000, 0.15, 'sine', 0.6), 200);
-        setTimeout(() => playBeep(1000, 0.15, 'sine', 0.6), 400);
-        setTimeout(() => playBeep(1000, 0.8, 'sine', 0.6), 600);
-      }, [playBeep]);
-      
       return {
-        playStartBeep: useCallback(() => playStartSequence(), [playStartSequence]),
+        // Short beep for countdown (3, 2, 1) - high pitched
+        playCountdownBeep: useCallback(() => playBeep(1000, 0.15, 'sine', 0.6), [playBeep]),
+        // Longer beep at 0 (end of phase) - same pitch but longer
+        playEndBeep: useCallback(() => playBeep(1000, 0.6, 'sine', 0.6), [playBeep]),
+        // One minute warning - double beep
         playOneMinuteBeep: useCallback(() => { playBeep(880, 0.15); setTimeout(() => playBeep(880, 0.15), 200); }, [playBeep]),
-        playCountdownBeep: useCallback(() => playBeep(660, 0.15, 'sine', 0.5), [playBeep]),
-        playEndBeep: useCallback(() => playEndSequence(), [playEndSequence]),
+        // Alert for prep phase start
         playAlertBeep: useCallback(() => playBeep(550, 0.3, 'sine', 0.5), [playBeep]),
         getAudioContext
       };
@@ -232,7 +219,7 @@
       useEffect(() => { climberInfoRef.current = climberInfo; }, [climberInfo]);
       useEffect(() => { phaseRef.current = timerState.phase; }, [timerState.phase]);
       
-      const { playStartBeep, playOneMinuteBeep, playCountdownBeep, playEndBeep, playAlertBeep, getAudioContext } = useAudio();
+      const { playOneMinuteBeep, playCountdownBeep, playEndBeep, playAlertBeep, getAudioContext } = useAudio();
       
       const broadcastState = useCallback(() => {
         const data = { type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current };
@@ -341,18 +328,26 @@
           setTimerState(prev => ({ ...prev, timeRemaining: remaining }));
           
           // Play sounds on all devices (host and clients)
+          // USA Climbing pattern: beep at 3, 2, 1 seconds, longer beep at 0
           if (soundEnabled && remaining !== lastSecondRef.current && lastSecondRef.current !== null) {
             const prev = lastSecondRef.current;
             if (phaseRef.current === 'prep') {
-              if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
-              if (remaining === 0 && prev > 0) playStartBeep();
+              // Countdown beeps at 3, 2, 1
+              if (remaining <= 3 && remaining > 0 && prev > remaining) playCountdownBeep();
+              // Longer beep at 0 (climb starts)
+              if (remaining === 0 && prev > 0) playEndBeep();
             } else if (phaseRef.current === 'climb') {
+              // One minute warning
               if (remaining === settings.warningTime && prev > settings.warningTime) playOneMinuteBeep();
-              if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
+              // Countdown beeps at 3, 2, 1
+              if (remaining <= 3 && remaining > 0 && prev > remaining) playCountdownBeep();
+              // Longer beep at 0 (climb ends)
               if (remaining === 0 && prev > 0) playEndBeep();
             } else if (phaseRef.current === 'transition') {
-              if (remaining <= 5 && remaining > 0 && prev > remaining) playCountdownBeep();
-              if (remaining === 0 && prev > 0) settings.prepDuration > 0 ? playAlertBeep() : playStartBeep();
+              // Countdown beeps at 3, 2, 1
+              if (remaining <= 3 && remaining > 0 && prev > remaining) playCountdownBeep();
+              // Longer beep at 0 (next phase starts)
+              if (remaining === 0 && prev > 0) playEndBeep();
             }
           }
           lastSecondRef.current = remaining;
@@ -391,7 +386,7 @@
           phaseStartTime: now,
           timeRemaining: prev.phase === 'idle' ? startDuration : prev.timeRemaining,
         }));
-        if (soundEnabled && timerState.phase === 'idle') settings.prepDuration > 0 ? playAlertBeep() : playStartBeep();
+        if (soundEnabled && timerState.phase === 'idle') settings.prepDuration > 0 ? playAlertBeep() : playEndBeep();
       };
       
       const handlePause = () => setTimerState(prev => ({ ...prev, isRunning: false }));
