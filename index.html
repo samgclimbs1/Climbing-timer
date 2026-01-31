@@ -202,6 +202,8 @@
       ExternalLink: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
       BarChart: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
       X: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+      Crop: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2v4"/><path d="M6 18H2"/><path d="M6 10v8h8"/><path d="M18 22v-4"/><path d="M18 6h4"/><path d="M18 14V6h-8"/></svg>,
+      Move: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>,
     };
 
     // Toggle Component
@@ -248,6 +250,17 @@
       const [showJoinModal, setShowJoinModal] = useState(false);
       const [showShortcuts, setShowShortcuts] = useState(false);
       const [showLeaderboard, setShowLeaderboard] = useState(false);
+      const [leaderboardSettings, setLeaderboardSettings] = useState({
+        position: 'bottom-right', // top-left, top-right, bottom-left, bottom-right, bottom-bar
+        size: 'medium', // small, medium, large
+        opacity: 0.95,
+        // Crop/pan settings
+        offsetX: 0, // pixels to shift left (positive = show more right side)
+        offsetY: 0, // pixels to shift up (positive = show more bottom)
+        zoom: 100, // percentage zoom
+        barHeight: 250, // height for bottom-bar mode
+      });
+      const [showCropControls, setShowCropControls] = useState(false);
       const [showIntermission, setShowIntermission] = useState(false);
       const [settingsTab, setSettingsTab] = useState('timer');
       const [soundEnabled, setSoundEnabled] = useState(!isDisplayMode);
@@ -295,10 +308,10 @@
         const data = { 
           type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, 
           climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current,
-          zones: zonesRef.current, boulderNumber, intermission
+          zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings
         };
         connectionsRef.current.forEach(conn => { if (conn?.open) try { conn.send(data); } catch (e) {} });
-      }, [boulderNumber, intermission]);
+      }, [boulderNumber, intermission, showLeaderboard, leaderboardSettings]);
       
       const handleReceivedState = useCallback((data) => {
         if (data.type === 'state') {
@@ -310,6 +323,8 @@
           if (data.zones !== undefined) setZones(data.zones);
           if (data.boulderNumber !== undefined) setBoulderNumber(data.boulderNumber);
           if (data.intermission !== undefined) setIntermission(data.intermission);
+          if (data.showLeaderboard !== undefined) setShowLeaderboard(data.showLeaderboard);
+          if (data.leaderboardSettings !== undefined) setLeaderboardSettings(data.leaderboardSettings);
         }
       }, []);
       
@@ -335,10 +350,10 @@
             conn.on('open', () => {
               connectionsRef.current.push(conn);
               setPeerCount(connectionsRef.current.length);
-              conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission });
+              conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings });
             });
             conn.on('data', (data) => {
-              if (data.type === 'requestState') conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission });
+              if (data.type === 'requestState') conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings });
             });
             conn.on('close', () => { connectionsRef.current = connectionsRef.current.filter(c => c !== conn); setPeerCount(connectionsRef.current.length); });
           });
@@ -355,12 +370,12 @@
           connectionsRef.current = [];
           peer?.destroy();
         };
-      }, [roomCode, isHost, handleReceivedState, boulderNumber, intermission]);
+      }, [roomCode, isHost, handleReceivedState, boulderNumber, intermission, showLeaderboard, leaderboardSettings]);
       
       // Broadcast on change
       useEffect(() => {
         if (isHost && connected && roomCode) broadcastState();
-      }, [timerState, settings, climberInfo, attempts, tops, zones, boulderNumber, intermission, isHost, connected, roomCode, broadcastState]);
+      }, [timerState, settings, climberInfo, attempts, tops, zones, boulderNumber, intermission, showLeaderboard, leaderboardSettings, isHost, connected, roomCode, broadcastState]);
       
       // Continuous sync
       useEffect(() => {
@@ -538,7 +553,27 @@
             case 'KeyZ': setZones(z => z + 1); break;
             case 'KeyB': setBoulderNumber(b => b + 1); break;
             case 'KeyI': setShowIntermission(true); break;
-            case 'KeyL': setShowLeaderboard(s => !s); break;
+            case 'KeyL': 
+              if (settings.griptoniteUrl) setShowLeaderboard(s => !s); 
+              break;
+            case 'KeyP': 
+              if (showLeaderboard) {
+                const positions = ['bottom-right', 'bottom-left', 'top-right', 'top-left', 'bottom-bar'];
+                setLeaderboardSettings(s => ({ ...s, position: positions[(positions.indexOf(s.position) + 1) % positions.length] }));
+              }
+              break;
+            case 'BracketLeft':
+              if (showLeaderboard) {
+                const sizes = ['small', 'medium', 'large'];
+                setLeaderboardSettings(s => ({ ...s, size: sizes[Math.max(0, sizes.indexOf(s.size) - 1)] }));
+              }
+              break;
+            case 'BracketRight':
+              if (showLeaderboard) {
+                const sizes = ['small', 'medium', 'large'];
+                setLeaderboardSettings(s => ({ ...s, size: sizes[Math.min(sizes.length - 1, sizes.indexOf(s.size) + 1)] }));
+              }
+              break;
             case 'ArrowUp': e.preventDefault(); if (timerState.phase !== 'idle') handleAddTime(5); break;
             case 'ArrowDown': e.preventDefault(); if (timerState.phase !== 'idle') handleAddTime(-5); break;
             case 'Slash': if (e.shiftKey) setShowShortcuts(s => !s); break;
@@ -670,7 +705,7 @@
                     {settings.voiceAnnouncements ? <Icons.Mic /> : <Icons.MicOff />}
                   </button>
                   {settings.griptoniteUrl && (
-                    <button onClick={() => window.open(settings.griptoniteUrl, '_blank')} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
+                    <button onClick={() => setShowLeaderboard(s => !s)} style={{ padding: '0.75rem', borderRadius: '9999px', background: showLeaderboard ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)', border: 'none' }} title="Toggle leaderboard overlay (L)">
                       <Icons.Trophy />
                     </button>
                   )}
@@ -1038,10 +1073,12 @@
                     ['Z', 'Add zone (+1)'],
                     ['B', 'Next boulder'],
                     ['I', 'Start intermission'],
-                    ['L', 'Toggle leaderboard'],
+                    ['L', 'Toggle leaderboard overlay'],
+                    ['P', 'Cycle leaderboard position'],
+                    ['[ / ]', 'Resize leaderboard'],
                     ['↑ / ↓', 'Add/subtract 5 seconds'],
                     ['?', 'Show shortcuts'],
-                    ['Esc', 'Close modals'],
+                    ['Esc', 'Close modals/overlay'],
                   ].map(([key, desc]) => (
                     <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: 'rgba(255,255,255,0.8)' }}>{desc}</span>
@@ -1051,6 +1088,236 @@
                 </div>
                 <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={() => setShowShortcuts(false)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Got it!</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Leaderboard Overlay */}
+          {showLeaderboard && settings.griptoniteUrl && (
+            <div style={{
+              position: 'fixed',
+              ...(leaderboardSettings.position === 'top-left' && { top: '1rem', left: '1rem' }),
+              ...(leaderboardSettings.position === 'top-right' && { top: '1rem', right: '1rem' }),
+              ...(leaderboardSettings.position === 'bottom-left' && { bottom: '1rem', left: '1rem' }),
+              ...(leaderboardSettings.position === 'bottom-right' && { bottom: '1rem', right: '1rem' }),
+              ...(leaderboardSettings.position === 'bottom-bar' && { bottom: 0, left: 0, right: 0 }),
+              // Width: full for bottom-bar, otherwise based on size
+              width: leaderboardSettings.position === 'bottom-bar' 
+                ? '100%' 
+                : (leaderboardSettings.size === 'small' ? '320px' : leaderboardSettings.size === 'medium' ? '480px' : '640px'),
+              // Height: barHeight for bottom-bar, otherwise based on size
+              height: leaderboardSettings.position === 'bottom-bar'
+                ? `${leaderboardSettings.barHeight}px`
+                : (leaderboardSettings.size === 'small' ? '400px' : leaderboardSettings.size === 'medium' ? '600px' : '800px'),
+              maxWidth: leaderboardSettings.position === 'bottom-bar' ? '100%' : '95vw',
+              maxHeight: leaderboardSettings.position === 'bottom-bar' ? '50vh' : '85vh',
+              zIndex: 40,
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: leaderboardSettings.position === 'bottom-bar' ? '1rem 1rem 0 0' : '1rem',
+              overflow: 'hidden',
+              boxShadow: '0 -10px 50px -12px rgba(0, 0, 0, 0.5)',
+              opacity: leaderboardSettings.opacity,
+              animation: 'slideIn 0.2s ease-out',
+            }}>
+              {/* Overlay Header */}
+              <div style={{ 
+                background: '#1e293b', 
+                padding: '0.5rem 1rem', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                borderBottom: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <span style={{ color: 'white', fontWeight: '600', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Icons.Trophy /> Live Results
+                </span>
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                  {canControl && (
+                    <>
+                      {/* Position buttons */}
+                      {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(pos => (
+                        <button key={pos} onClick={() => setLeaderboardSettings(s => ({ ...s, position: pos }))}
+                          style={{ 
+                            width: '1.5rem', height: '1.5rem', 
+                            background: leaderboardSettings.position === pos ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                            border: 'none', borderRadius: '0.25rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.6rem', color: 'white'
+                          }}
+                          title={pos.replace('-', ' ')}>
+                          {pos === 'top-left' ? '↖' : pos === 'top-right' ? '↗' : pos === 'bottom-left' ? '↙' : '↘'}
+                        </button>
+                      ))}
+                      {/* Bottom bar button */}
+                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar' }))}
+                        style={{ 
+                          padding: '0.25rem 0.5rem', 
+                          background: leaderboardSettings.position === 'bottom-bar' ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                          border: 'none', borderRadius: '0.25rem',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.6rem', color: 'white'
+                        }}
+                        title="Full width bottom bar">
+                        ▂▂
+                      </button>
+                      <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
+                      {/* Size buttons - hidden in bottom-bar mode */}
+                      {leaderboardSettings.position !== 'bottom-bar' && ['small', 'medium', 'large'].map(size => (
+                        <button key={size} onClick={() => setLeaderboardSettings(s => ({ ...s, size }))}
+                          style={{ 
+                            padding: '0.25rem 0.5rem',
+                            background: leaderboardSettings.size === size ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                            border: 'none', borderRadius: '0.25rem',
+                            fontSize: '0.65rem', color: 'white', textTransform: 'uppercase'
+                          }}>
+                          {size[0]}
+                        </button>
+                      ))}
+                      {/* Height slider for bottom-bar mode */}
+                      {leaderboardSettings.position === 'bottom-bar' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>H:</span>
+                          <input type="range" min="150" max="500" step="25" value={leaderboardSettings.barHeight}
+                            onChange={e => setLeaderboardSettings(s => ({ ...s, barHeight: parseInt(e.target.value) }))}
+                            style={{ width: '60px', height: '4px' }} />
+                          <span style={{ color: 'white', fontSize: '0.6rem', width: '2rem' }}>{leaderboardSettings.barHeight}</span>
+                        </div>
+                      )}
+                      <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
+                      {/* Crop/pan button */}
+                      <button onClick={() => setShowCropControls(s => !s)}
+                        style={{ 
+                          padding: '0.25rem 0.5rem',
+                          background: showCropControls ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                          border: 'none', borderRadius: '0.25rem',
+                          color: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          fontSize: '0.65rem'
+                        }}
+                        title="Crop & pan view">
+                        <Icons.Crop /> Crop
+                      </button>
+                    </>
+                  )}
+                  {/* External link */}
+                  <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
+                    style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}
+                    title="Open in new tab">
+                    <Icons.ExternalLink />
+                  </button>
+                  {/* Close button - only for host */}
+                  {canControl && (
+                    <button onClick={() => setShowLeaderboard(false)}
+                      style={{ padding: '0.25rem', background: 'rgba(239,68,68,0.3)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}>
+                      <Icons.X />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Crop Controls Panel */}
+              {showCropControls && canControl && (
+                <div style={{ 
+                  background: '#1e293b', 
+                  padding: '0.75rem 1rem', 
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
+                    Adjust to show just the scores section
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Zoom:</span>
+                      <input type="range" min="100" max="300" step="10" value={leaderboardSettings.zoom} 
+                        onChange={e => setLeaderboardSettings(s => ({ ...s, zoom: parseInt(e.target.value) }))}
+                        style={{ flex: 1, height: '4px' }} />
+                      <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.zoom}%</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Pan X:</span>
+                      <input type="range" min="0" max="1500" step="10" value={leaderboardSettings.offsetX} 
+                        onChange={e => setLeaderboardSettings(s => ({ ...s, offsetX: parseInt(e.target.value) }))}
+                        style={{ flex: 1, height: '4px' }} />
+                      <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.offsetX}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Pan Y:</span>
+                      <input type="range" min="0" max="3000" step="10" value={leaderboardSettings.offsetY} 
+                        onChange={e => setLeaderboardSettings(s => ({ ...s, offsetY: parseInt(e.target.value) }))}
+                        style={{ flex: 1, height: '4px' }} />
+                      <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.offsetY}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {/* Quick presets for common Griptonite layouts */}
+                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 400, zoom: 150 }))}
+                        style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
+                        Scores Only
+                      </button>
+                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 300, zoom: 120 }))}
+                        style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
+                        Leaderboard
+                      </button>
+                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar', offsetX: 0, offsetY: 350, zoom: 100, barHeight: 250 }))}
+                        style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
+                        Wide Bar
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 0, zoom: 100 }))}
+                        style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.7rem' }}>
+                        Reset
+                      </button>
+                      <button onClick={() => setShowCropControls(false)}
+                        style={{ padding: '0.25rem 0.75rem', background: '#3b82f6', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.7rem' }}>
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Iframe with crop applied - scales up and pans to show specific region */}
+              <div style={{ flex: 1, background: 'white', position: 'relative', overflow: 'hidden' }}>
+                <iframe 
+                  src={settings.griptoniteUrl}
+                  style={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: `${leaderboardSettings.zoom}%`,
+                    height: `${leaderboardSettings.zoom}%`,
+                    border: 'none',
+                    transform: `translate(-${leaderboardSettings.offsetX}px, -${leaderboardSettings.offsetY}px)`,
+                    transformOrigin: 'top left',
+                  }}
+                  title="Griptonite Leaderboard"
+                  sandbox="allow-scripts allow-same-origin allow-popups"
+                />
+                {/* Fallback message if iframe is blocked */}
+                <div style={{ 
+                  position: 'absolute', 
+                  inset: 0, 
+                  background: '#1e293b', 
+                  display: 'none',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem',
+                  textAlign: 'center'
+                }}>
+                  <Icons.Trophy />
+                  <p style={{ color: 'white', marginTop: '1rem', marginBottom: '0.5rem' }}>Unable to embed results page</p>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>The site may block embedding. Click below to open in a new tab.</p>
+                  <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
+                    style={{ padding: '0.75rem 1.5rem', background: '#3b82f6', border: 'none', borderRadius: '0.5rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    Open Results <Icons.ExternalLink />
+                  </button>
                 </div>
               </div>
             </div>
