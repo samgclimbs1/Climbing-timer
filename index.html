@@ -172,6 +172,17 @@
       finals: { name: 'Finals', climbDuration: 240, transitionDuration: 0, prepDuration: 60 },
       redpoint: { name: 'Redpoint', climbDuration: 300, transitionDuration: 60, prepDuration: 0 },
       onsight: { name: 'Onsight', climbDuration: 240, transitionDuration: 0, prepDuration: 120 },
+      ifscQualifiers: { name: 'IFSC Qualifiers', climbDuration: 300, transitionDuration: 0, prepDuration: 0 },
+      usacLocal: { name: 'USAC Local', climbDuration: 240, transitionDuration: 30, prepDuration: 0 },
+      youth: { name: 'Youth Comp', climbDuration: 180, transitionDuration: 30, prepDuration: 0 },
+    };
+
+    // Competition Format Presets
+    const COMP_FORMATS = {
+      ifsc: { name: 'IFSC', categories: ['Junior', 'Youth A', 'Youth B', 'Open'], divisions: ['Male', 'Female'], bouldersCount: 4 },
+      usac: { name: 'USA Climbing', categories: ['Youth D', 'Youth C', 'Youth B', 'Youth A', 'Junior', 'Open', 'Masters'], divisions: ['Male', 'Female'], bouldersCount: 5 },
+      abs: { name: 'ABS (American Bouldering Series)', categories: ['Open', 'Recreational', 'Advanced'], divisions: ['Male', 'Female', 'Non-Binary'], bouldersCount: 4 },
+      local: { name: 'Local Comp', categories: ['Beginner', 'Intermediate', 'Advanced', 'Elite'], divisions: ['Male', 'Female', 'Youth'], bouldersCount: 5 },
     };
 
     // Hangboard Training Presets
@@ -511,6 +522,11 @@
       };
       
       const nextClimber = () => {
+        // Auto-save current climber's score before moving to next
+        if (settings.autoSaveScores && climberInfo.name && (attempts > 0 || tops > 0 || zones > 0)) {
+          saveToLeaderboard();
+        }
+        
         if (climberQueue.length > 0) {
           const [next, ...rest] = climberQueue;
           setClimberInfo({ 
@@ -538,6 +554,17 @@
       const applyPreset = (presetKey) => {
         const preset = PRESETS[presetKey];
         setSettings(s => ({ ...s, climbDuration: preset.climbDuration, transitionDuration: preset.transitionDuration, prepDuration: preset.prepDuration }));
+      };
+      
+      // Handle Boulder Change with auto-save
+      const handleBoulderChange = () => {
+        if (settings.autoSaveScores && climberInfo.name && (attempts > 0 || tops > 0 || zones > 0)) {
+          saveToLeaderboard();
+        }
+        setBoulderNumber(b => b + 1);
+        setAttempts(0);
+        setTops(0);
+        setZones(0);
       };
       
       // CSV Import
@@ -710,6 +737,18 @@
         return sorted;
       };
       
+      // Apply Competition Format Preset
+      const applyCompFormat = (formatKey) => {
+        const format = COMP_FORMATS[formatKey];
+        if (!format) return;
+        setCategories(format.categories);
+        setDivisions(format.divisions);
+        // Optionally update competition name
+        if (settings.compName === 'Three Rivers Rumble') {
+          setSettings(s => ({ ...s, compName: `${format.name} Competition` }));
+        }
+      };
+      
       // Session Stats Tracking
       useEffect(() => {
         if (timerState.isRunning && timerState.phase === 'climb' && !sessionStats.startTime) {
@@ -817,7 +856,7 @@
             case 'KeyA': setAttempts(a => a + 1); break;
             case 'KeyT': setTops(t => t + 1); break;
             case 'KeyZ': setZones(z => z + 1); break;
-            case 'KeyB': setBoulderNumber(b => b + 1); break;
+            case 'KeyB': handleBoulderChange(); break;
             case 'KeyI': setShowIntermission(true); break;
             case 'KeyL': setShowLeaderboard(s => !s); break;
             case 'KeyH': setTrainingMode(m => !m); break;
@@ -1152,7 +1191,7 @@
                   </button>
                 )}
                 {settings.showScoring && settings.showBoulderNumber && (
-                  <button onClick={() => setBoulderNumber(b => b + 1)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
+                  <button onClick={handleBoulderChange} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
                     Boulder {boulderNumber} → {boulderNumber + 1}
                   </button>
                 )}
@@ -1395,6 +1434,7 @@
                       { label: 'Show scoring (attempts/tops/zones)', key: 'showScoring' },
                       { label: 'Show boulder number', key: 'showBoulderNumber', disabled: !settings.showScoring },
                       { label: 'Voice announcements', key: 'voiceAnnouncements' },
+                      { label: 'Auto-save scores to leaderboard', key: 'autoSaveScores' },
                     ].map(({ label, key, disabled }) => (
                       <div key={key} style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <label style={{ color: disabled ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.8)' }}>{label}</label>
@@ -1719,6 +1759,19 @@
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'white' }}>⚙️ Competition Setup</h2>
                   <button onClick={() => setShowCompetitionSetup(false)} style={{ background: 'transparent', border: 'none' }}><Icons.X /></button>
+                </div>
+                
+                {/* Competition Format Presets */}
+                <div style={{ marginBottom: '2rem', padding: '1rem', background: 'rgba(251,191,36,0.1)', borderRadius: '0.75rem', border: '1px solid rgba(251,191,36,0.2)' }}>
+                  <h3 style={{ color: 'white', marginBottom: '1rem', fontSize: '1.125rem', fontWeight: '600' }}>Quick Setup - Competition Formats</h3>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {Object.entries(COMP_FORMATS).map(([key, format]) => (
+                      <button key={key} onClick={() => applyCompFormat(key)} style={{ padding: '0.5rem 1rem', background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '0.5rem', color: '#fbbf24', fontSize: '0.875rem', fontWeight: '600' }}>
+                        {format.name}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Apply standard competition categories and divisions</p>
                 </div>
                 
                 {/* Categories Management */}
