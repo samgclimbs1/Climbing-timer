@@ -107,68 +107,50 @@ const QRCodeCanvas = ({ value, size = 200 }) => {
   return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
 };
 
-// Audio Hook - Fixed for iOS/mobile autoplay policy
+// Audio Hook
 const useAudio = () => {
   const audioCtxRef = useRef(null);
   const unlockedRef = useRef(false);
-
   const getCtx = useCallback(() => {
-    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed')
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
-    // iOS unlock: play a silent buffer on first user-gesture interaction
-    if (!unlockedRef.current && audioCtxRef.current) {
+    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+    if (!unlockedRef.current) {
       try {
-        const buf = audioCtxRef.current.createBuffer(1, 1, 22050);
-        const src = audioCtxRef.current.createBufferSource();
+        var buf = audioCtxRef.current.createBuffer(1, 1, 22050);
+        var src = audioCtxRef.current.createBufferSource();
         src.buffer = buf;
         src.connect(audioCtxRef.current.destination);
         src.start(0);
         unlockedRef.current = true;
-      } catch (e) {
-        console.warn('Audio unlock failed:', e);
-      }
+      } catch (e) { console.warn('Audio unlock failed:', e); }
     }
     return audioCtxRef.current;
   }, []);
-
-  const scheduleBeep = useCallback((ctx, freq, dur, type, vol) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    osc.type = type;
-    gain.gain.setValueAtTime(vol, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + dur);
-  }, []);
-
-  const playBeep = useCallback((freq = 880, dur = 0.15, type = 'sine', vol = 0.5) => {
+  const playBeep = useCallback((freq, dur, type, vol) => {
     try {
-      const ctx = getCtx();
+      var ctx = getCtx();
+      var doPlay = function() {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; osc.type = type;
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur);
+      };
       if (ctx.state === 'running') {
-        scheduleBeep(ctx, freq, dur, type, vol);
+        doPlay();
       } else {
-        // Wait for resume to complete before scheduling
-        ctx.resume().then(() => {
-          scheduleBeep(ctx, freq, dur, type, vol);
-        }).catch(e => console.warn('Audio resume failed:', e));
+        ctx.resume().then(doPlay);
       }
-    } catch (e) {
-      console.warn('Audio playback error:', e);
-    }
-  }, [getCtx, scheduleBeep]);
-
+    } catch (e) { console.warn('Audio error:', e); }
+  }, [getCtx]);
   return {
-    playCountdownBeep: useCallback(() => playBeep(880, 0.15, 'sine', 0.6), [playBeep]),
-    playEndBeep: useCallback(() => playBeep(880, 1.5, 'square', 0.7), [playBeep]),
-    playWarningBeep: useCallback(() => { playBeep(880, 0.15, 'sine', 0.6); setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 200); }, [playBeep]),
-    playAlertBeep: useCallback(() => playBeep(550, 0.3, 'sine', 0.5), [playBeep]),
+    playCountdownBeep: useCallback(function() { playBeep(880, 0.15, 'sine', 0.6); }, [playBeep]),
+    playEndBeep: useCallback(function() { playBeep(880, 1.5, 'square', 0.7); }, [playBeep]),
+    playWarningBeep: useCallback(function() { playBeep(880, 0.15, 'sine', 0.6); setTimeout(function() { playBeep(880, 0.15, 'sine', 0.6); }, 200); }, [playBeep]),
+    playAlertBeep: useCallback(function() { playBeep(550, 0.3, 'sine', 0.5); }, [playBeep]),
     getCtx
   };
 };
@@ -289,13 +271,14 @@ function ClimbingTimer() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardSettings, setLeaderboardSettings] = useState({
-    position: 'bottom-right',
-    size: 'medium',
+    position: 'bottom-right', // top-left, top-right, bottom-left, bottom-right, bottom-bar
+    size: 'medium', // small, medium, large
     opacity: 0.95,
-    offsetX: 0,
-    offsetY: 0,
-    zoom: 100,
-    barHeight: 250,
+    // Crop/pan settings
+    offsetX: 0, // pixels to shift left (positive = show more right side)
+    offsetY: 0, // pixels to shift up (positive = show more bottom)
+    zoom: 100, // percentage zoom
+    barHeight: 250, // height for bottom-bar mode
   });
   const [showCropControls, setShowCropControls] = useState(false);
   const [showIntermission, setShowIntermission] = useState(false);
@@ -339,6 +322,17 @@ function ClimbingTimer() {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Unlock audio on first touch/click for mobile
+  useEffect(() => {
+    var handler = function() { getCtx(); };
+    document.addEventListener('touchstart', handler, { once: true });
+    document.addEventListener('click', handler, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', handler);
+      document.removeEventListener('click', handler);
+    };
+  }, [getCtx]);
   
   // Broadcast
   const broadcastState = useCallback(() => {
@@ -468,21 +462,10 @@ function ClimbingTimer() {
     if (timerState.isRunning && !isLocked) requestWakeLock();
     else if (!timerState.isRunning && timerState.phase === 'idle' && isLocked) releaseWakeLock();
   }, [timerState.isRunning, timerState.phase, isLocked, requestWakeLock, releaseWakeLock]);
-
-  // Also unlock audio on any touch/click event for mobile
-  useEffect(() => {
-    const unlockAudio = () => { getCtx(); };
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    document.addEventListener('click', unlockAudio, { once: true });
-    return () => {
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('click', unlockAudio);
-    };
-  }, [getCtx]);
   
   // Handlers
   const handleStart = () => {
-    getCtx(); // Ensure audio context is unlocked on this user gesture
+    getCtx();
     const now = Date.now();
     const startPhase = settings.prepDuration > 0 ? 'prep' : 'climb';
     const startDuration = settings.prepDuration > 0 ? settings.prepDuration : settings.climbDuration;
@@ -879,6 +862,7 @@ function ClimbingTimer() {
             {/* Timer Tab */}
             {settingsTab === 'timer' && (
               <>
+                {/* Presets */}
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Quick Presets</label>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -890,6 +874,7 @@ function ClimbingTimer() {
                   </div>
                 </div>
                 
+                {/* Time Settings */}
                 {[
                   { label: 'Observation Time', key: 'prepDuration', min: 0, max: 120, step: 5, presets: [0, 30, 60, 120], color: '#7c3aed' },
                   { label: 'Climb Duration', key: 'climbDuration', min: 60, max: 600, step: 30, presets: [180, 240, 300, 360], color: '#059669' },
@@ -911,6 +896,7 @@ function ClimbingTimer() {
                   </div>
                 ))}
                 
+                {/* Warning Time */}
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Warning Beep At</label>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -922,6 +908,7 @@ function ClimbingTimer() {
                   </div>
                 </div>
                 
+                {/* Auto-advance */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <label style={{ color: 'rgba(255,255,255,0.8)' }}>Auto-advance phases</label>
                   <Toggle value={settings.enableAutoTransition} onChange={v => setSettings(s => ({ ...s, enableAutoTransition: v }))} />
@@ -932,6 +919,7 @@ function ClimbingTimer() {
             {/* Climbers Tab */}
             {settingsTab === 'climbers' && (
               <>
+                {/* Current Climber */}
                 <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
                   <h3 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1rem' }}>Current Climber</h3>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -940,6 +928,7 @@ function ClimbingTimer() {
                   </div>
                 </div>
                 
+                {/* Climber Queue */}
                 <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <h3 style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }}>Queue ({climberQueue.length})</h3>
@@ -963,6 +952,7 @@ function ClimbingTimer() {
                   <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: '0.5rem' }}>CSV format: number, name (one per line)</p>
                 </div>
                 
+                {/* Category */}
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Category / Division</label>
                   <input type="text" placeholder="e.g., Open Male, Youth D Female" value={settings.category} onChange={e => setSettings(s => ({ ...s, category: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
@@ -973,11 +963,13 @@ function ClimbingTimer() {
             {/* Display Tab */}
             {settingsTab === 'display' && (
               <>
+                {/* Competition Name */}
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Competition Name</label>
                   <input type="text" value={settings.compName} onChange={e => setSettings(s => ({ ...s, compName: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
                 </div>
                 
+                {/* Toggles */}
                 {[
                   { label: 'Show clock', key: 'showClock' },
                   { label: 'Show scoring (attempts/tops/zones)', key: 'showScoring' },
@@ -990,6 +982,7 @@ function ClimbingTimer() {
                   </div>
                 ))}
                 
+                {/* Intermission Message */}
                 <div style={{ marginTop: '1.5rem' }}>
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Intermission Message</label>
                   <input type="text" value={intermission.message} onChange={e => setIntermission(i => ({ ...i, message: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
@@ -1157,6 +1150,7 @@ function ClimbingTimer() {
           opacity: leaderboardSettings.opacity,
           animation: 'slideIn 0.2s ease-out',
         }}>
+          {/* Overlay Header */}
           <div style={{ 
             background: '#1e293b', 
             padding: '0.5rem 1rem', 
@@ -1171,6 +1165,7 @@ function ClimbingTimer() {
             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
               {canControl && (
                 <>
+                  {/* Position buttons */}
                   {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(pos => (
                     <button key={pos} onClick={() => setLeaderboardSettings(s => ({ ...s, position: pos }))}
                       style={{ 
@@ -1184,6 +1179,7 @@ function ClimbingTimer() {
                       {pos === 'top-left' ? '↖' : pos === 'top-right' ? '↗' : pos === 'bottom-left' ? '↙' : '↘'}
                     </button>
                   ))}
+                  {/* Bottom bar button */}
                   <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar' }))}
                     style={{ 
                       padding: '0.25rem 0.5rem', 
@@ -1196,6 +1192,7 @@ function ClimbingTimer() {
                     ▂▂
                   </button>
                   <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
+                  {/* Size buttons - hidden in bottom-bar mode */}
                   {leaderboardSettings.position !== 'bottom-bar' && ['small', 'medium', 'large'].map(size => (
                     <button key={size} onClick={() => setLeaderboardSettings(s => ({ ...s, size }))}
                       style={{ 
@@ -1207,6 +1204,7 @@ function ClimbingTimer() {
                       {size[0]}
                     </button>
                   ))}
+                  {/* Height slider for bottom-bar mode */}
                   {leaderboardSettings.position === 'bottom-bar' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>H:</span>
@@ -1217,6 +1215,7 @@ function ClimbingTimer() {
                     </div>
                   )}
                   <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
+                  {/* Crop/pan button */}
                   <button onClick={() => setShowCropControls(s => !s)}
                     style={{ 
                       padding: '0.25rem 0.5rem',
@@ -1230,11 +1229,13 @@ function ClimbingTimer() {
                   </button>
                 </>
               )}
+              {/* External link */}
               <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
                 style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}
                 title="Open in new tab">
                 <Icons.ExternalLink />
               </button>
+              {/* Close button - only for host */}
               {canControl && (
                 <button onClick={() => setShowLeaderboard(false)}
                   style={{ padding: '0.25rem', background: 'rgba(239,68,68,0.3)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}>
@@ -1244,6 +1245,7 @@ function ClimbingTimer() {
             </div>
           </div>
           
+          {/* Crop Controls Panel */}
           {showCropControls && canControl && (
             <div style={{ 
               background: '#1e293b', 
@@ -1281,6 +1283,7 @@ function ClimbingTimer() {
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {/* Quick presets for common Griptonite layouts */}
                   <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 400, zoom: 150 }))}
                     style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
                     Scores Only
@@ -1308,6 +1311,7 @@ function ClimbingTimer() {
             </div>
           )}
           
+          {/* Iframe with crop applied */}
           <div style={{ flex: 1, background: 'white', position: 'relative', overflow: 'hidden' }}>
             <iframe 
               src={settings.griptoniteUrl}
@@ -1361,4 +1365,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(<ClimbingTimer />);
 
   </script>
 </body>
-</html> 
+</html>
