@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -35,1304 +36,1329 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
-    // QR Code Generator
-    function generateQRCode(text) {
-      const size = 29;
-      const matrix = Array(size).fill(null).map(() => Array(size).fill(null));
-      const reserved = Array(size).fill(null).map(() => Array(size).fill(false));
-      function addFinderPattern(x, y) {
-        for (let dy = -1; dy <= 7; dy++) {
-          for (let dx = -1; dx <= 7; dx++) {
-            const px = x + dx, py = y + dy;
-            if (px < 0 || py < 0 || px >= size || py >= size) continue;
-            reserved[py][px] = true;
-            if (dx === -1 || dx === 7 || dy === -1 || dy === 7) matrix[py][px] = false;
-            else if ((dx === 0 || dx === 6) || (dy === 0 || dy === 6)) matrix[py][px] = true;
-            else if (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4) matrix[py][px] = true;
-            else matrix[py][px] = false;
-          }
-        }
+```
+// QR Code Generator
+function generateQRCode(text) {
+  const size = 29;
+  const matrix = Array(size).fill(null).map(() => Array(size).fill(null));
+  const reserved = Array(size).fill(null).map(() => Array(size).fill(false));
+  function addFinderPattern(x, y) {
+    for (let dy = -1; dy <= 7; dy++) {
+      for (let dx = -1; dx <= 7; dx++) {
+        const px = x + dx, py = y + dy;
+        if (px < 0 || py < 0 || px >= size || py >= size) continue;
+        reserved[py][px] = true;
+        if (dx === -1 || dx === 7 || dy === -1 || dy === 7) matrix[py][px] = false;
+        else if ((dx === 0 || dx === 6) || (dy === 0 || dy === 6)) matrix[py][px] = true;
+        else if (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4) matrix[py][px] = true;
+        else matrix[py][px] = false;
       }
-      addFinderPattern(0, 0); addFinderPattern(size - 7, 0); addFinderPattern(0, size - 7);
-      for (let i = 8; i < size - 8; i++) { reserved[6][i] = reserved[i][6] = true; matrix[6][i] = matrix[i][6] = i % 2 === 0; }
-      reserved[size - 8][8] = true; matrix[size - 8][8] = true;
-      for (let i = 0; i < 9; i++) { reserved[8][i] = reserved[i][8] = true; }
-      for (let i = 0; i < 8; i++) { reserved[8][size - 1 - i] = reserved[size - 1 - i][8] = true; }
-      const bytes = new TextEncoder().encode(text);
-      let bits = '0100' + bytes.length.toString(2).padStart(8, '0');
-      bytes.forEach(b => bits += b.toString(2).padStart(8, '0'));
-      bits += '0000';
-      while (bits.length % 8 !== 0) bits += '0';
-      const capacity = 70 * 8;
-      let padIndex = 0;
-      const padBytes = ['11101100', '00010001'];
-      while (bits.length < capacity) bits += padBytes[padIndex++ % 2];
-      let bitIndex = 0, upward = true;
-      for (let col = size - 1; col >= 1; col -= 2) {
-        if (col === 6) col = 5;
-        for (let row = 0; row < size; row++) {
-          const actualRow = upward ? size - 1 - row : row;
-          for (let c = 0; c < 2; c++) {
-            const x = col - c, y = actualRow;
-            if (!reserved[y][x] && bitIndex < bits.length) matrix[y][x] = bits[bitIndex++] === '1';
-          }
-        }
-        upward = !upward;
-      }
-      const formatBits = '111011111000100';
-      for (let i = 0; i < 6; i++) { matrix[8][i] = formatBits[i] === '1'; matrix[i][8] = formatBits[14 - i] === '1'; }
-      matrix[8][7] = formatBits[6] === '1'; matrix[8][8] = formatBits[7] === '1'; matrix[7][8] = formatBits[8] === '1';
-      for (let i = 0; i < 7; i++) { matrix[8][size - 1 - i] = formatBits[14 - i] === '1'; matrix[size - 1 - i][8] = formatBits[i] === '1'; }
-      matrix[8][size - 8] = formatBits[7] === '1';
-      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!reserved[y][x] && (x + y) % 2 === 0) matrix[y][x] = !matrix[y][x];
-      return matrix;
     }
+  }
+  addFinderPattern(0, 0); addFinderPattern(size - 7, 0); addFinderPattern(0, size - 7);
+  for (let i = 8; i < size - 8; i++) { reserved[6][i] = reserved[i][6] = true; matrix[6][i] = matrix[i][6] = i % 2 === 0; }
+  reserved[size - 8][8] = true; matrix[size - 8][8] = true;
+  for (let i = 0; i < 9; i++) { reserved[8][i] = reserved[i][8] = true; }
+  for (let i = 0; i < 8; i++) { reserved[8][size - 1 - i] = reserved[size - 1 - i][8] = true; }
+  const bytes = new TextEncoder().encode(text);
+  let bits = '0100' + bytes.length.toString(2).padStart(8, '0');
+  bytes.forEach(b => bits += b.toString(2).padStart(8, '0'));
+  bits += '0000';
+  while (bits.length % 8 !== 0) bits += '0';
+  const capacity = 70 * 8;
+  let padIndex = 0;
+  const padBytes = ['11101100', '00010001'];
+  while (bits.length < capacity) bits += padBytes[padIndex++ % 2];
+  let bitIndex = 0, upward = true;
+  for (let col = size - 1; col >= 1; col -= 2) {
+    if (col === 6) col = 5;
+    for (let row = 0; row < size; row++) {
+      const actualRow = upward ? size - 1 - row : row;
+      for (let c = 0; c < 2; c++) {
+        const x = col - c, y = actualRow;
+        if (!reserved[y][x] && bitIndex < bits.length) matrix[y][x] = bits[bitIndex++] === '1';
+      }
+    }
+    upward = !upward;
+  }
+  const formatBits = '111011111000100';
+  for (let i = 0; i < 6; i++) { matrix[8][i] = formatBits[i] === '1'; matrix[i][8] = formatBits[14 - i] === '1'; }
+  matrix[8][7] = formatBits[6] === '1'; matrix[8][8] = formatBits[7] === '1'; matrix[7][8] = formatBits[8] === '1';
+  for (let i = 0; i < 7; i++) { matrix[8][size - 1 - i] = formatBits[14 - i] === '1'; matrix[size - 1 - i][8] = formatBits[i] === '1'; }
+  matrix[8][size - 8] = formatBits[7] === '1';
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!reserved[y][x] && (x + y) % 2 === 0) matrix[y][x] = !matrix[y][x];
+  return matrix;
+}
 
-    const QRCodeCanvas = ({ value, size = 200 }) => {
-      const canvasRef = useRef(null);
-      useEffect(() => {
-        if (!canvasRef.current || !value) return;
-        const ctx = canvasRef.current.getContext('2d');
-        const qr = generateQRCode(value);
-        const cellSize = size / qr.length;
-        canvasRef.current.width = size; canvasRef.current.height = size;
-        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = '#000000';
-        qr.forEach((row, y) => row.forEach((cell, x) => {
-          if (cell) ctx.fillRect(Math.floor(x * cellSize), Math.floor(y * cellSize), Math.ceil(cellSize), Math.ceil(cellSize));
-        }));
-      }, [value, size]);
-      return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
+const QRCodeCanvas = ({ value, size = 200 }) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (!canvasRef.current || !value) return;
+    const ctx = canvasRef.current.getContext('2d');
+    const qr = generateQRCode(value);
+    const cellSize = size / qr.length;
+    canvasRef.current.width = size; canvasRef.current.height = size;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = '#000000';
+    qr.forEach((row, y) => row.forEach((cell, x) => {
+      if (cell) ctx.fillRect(Math.floor(x * cellSize), Math.floor(y * cellSize), Math.ceil(cellSize), Math.ceil(cellSize));
+    }));
+  }, [value, size]);
+  return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
+};
+
+// Audio Hook - Fixed for iOS/mobile autoplay policy
+const useAudio = () => {
+  const audioCtxRef = useRef(null);
+  const unlockedRef = useRef(false);
+
+  const getCtx = useCallback(() => {
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    // iOS unlock: play a silent buffer on first user-gesture interaction
+    if (!unlockedRef.current && audioCtxRef.current) {
+      try {
+        const buf = audioCtxRef.current.createBuffer(1, 1, 22050);
+        const src = audioCtxRef.current.createBufferSource();
+        src.buffer = buf;
+        src.connect(audioCtxRef.current.destination);
+        src.start(0);
+        unlockedRef.current = true;
+      } catch (e) {
+        console.warn('Audio unlock failed:', e);
+      }
+    }
+    return audioCtxRef.current;
+  }, []);
+
+  const scheduleBeep = useCallback((ctx, freq, dur, type, vol) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + dur);
+  }, []);
+
+  const playBeep = useCallback((freq = 880, dur = 0.15, type = 'sine', vol = 0.5) => {
+    try {
+      const ctx = getCtx();
+      if (ctx.state === 'running') {
+        scheduleBeep(ctx, freq, dur, type, vol);
+      } else {
+        // Wait for resume to complete before scheduling
+        ctx.resume().then(() => {
+          scheduleBeep(ctx, freq, dur, type, vol);
+        }).catch(e => console.warn('Audio resume failed:', e));
+      }
+    } catch (e) {
+      console.warn('Audio playback error:', e);
+    }
+  }, [getCtx, scheduleBeep]);
+
+  return {
+    playCountdownBeep: useCallback(() => playBeep(880, 0.15, 'sine', 0.6), [playBeep]),
+    playEndBeep: useCallback(() => playBeep(880, 1.5, 'square', 0.7), [playBeep]),
+    playWarningBeep: useCallback(() => { playBeep(880, 0.15, 'sine', 0.6); setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 200); }, [playBeep]),
+    playAlertBeep: useCallback(() => playBeep(550, 0.3, 'sine', 0.5), [playBeep]),
+    getCtx
+  };
+};
+
+// Voice Hook
+const useVoice = (enabled) => {
+  const speak = useCallback((text) => {
+    if (!enabled || !window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.1; u.pitch = 1; u.volume = 1;
+    window.speechSynthesis.speak(u);
+  }, [enabled]);
+  return { speak };
+};
+
+// Wake Lock Hook
+const useWakeLock = () => {
+  const wakeLockRef = useRef(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const requestWakeLock = useCallback(async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        setIsLocked(true);
+        wakeLockRef.current.addEventListener('release', () => setIsLocked(false));
+      }
+    } catch (e) {}
+  }, []);
+  const releaseWakeLock = useCallback(() => {
+    if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; setIsLocked(false); }
+  }, []);
+  return { isLocked, requestWakeLock, releaseWakeLock };
+};
+
+// Timer Presets
+const PRESETS = {
+  qualifiers: { name: 'Qualifiers', climbDuration: 240, transitionDuration: 30, prepDuration: 0 },
+  semifinals: { name: 'Semi-Finals', climbDuration: 300, transitionDuration: 45, prepDuration: 0 },
+  finals: { name: 'Finals', climbDuration: 240, transitionDuration: 0, prepDuration: 60 },
+  redpoint: { name: 'Redpoint', climbDuration: 300, transitionDuration: 60, prepDuration: 0 },
+  onsight: { name: 'Onsight', climbDuration: 240, transitionDuration: 0, prepDuration: 120 },
+};
+
+// Icons
+const Icons = {
+  Play: () => <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+  Pause: () => <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>,
+  Reset: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+  Skip: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4" fill="white"/><line x1="19" y1="5" x2="19" y2="19"/></svg>,
+  Settings: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  QR: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>,
+  Volume: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
+  Mute: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>,
+  Fullscreen: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>,
+  Sync: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>,
+  Users: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  Check: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+  Copy: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  Clock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+  Plus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Minus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Mic: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>,
+  MicOff: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.45-.32 2.12"/><line x1="12" y1="19" x2="12" y2="22"/></svg>,
+  Keyboard: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>,
+  Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  Download: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  Trophy: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+  Coffee: () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>,
+  ExternalLink: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+  BarChart: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
+  X: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  Crop: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2v4"/><path d="M6 18H2"/><path d="M6 10v8h8"/><path d="M18 22v-4"/><path d="M18 6h4"/><path d="M18 14V6h-8"/></svg>,
+  Move: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>,
+};
+
+// Toggle Component
+const Toggle = ({ value, onChange, disabled }) => (
+  <button onClick={() => !disabled && onChange(!value)} disabled={disabled}
+    className="toggle-track" style={{ background: value ? '#059669' : 'rgba(255,255,255,0.2)', opacity: disabled ? 0.5 : 1 }}>
+    <div className="toggle-thumb" style={{ left: value ? '1.5rem' : '0.25rem' }} />
+  </button>
+);
+
+// Main Component
+function ClimbingTimer() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlRoomCode = urlParams.get('room');
+  const isDisplayMode = urlParams.get('display') === '1';
+  
+  // Core State
+  const [roomCode, setRoomCode] = useState(urlRoomCode || '');
+  const [isHost, setIsHost] = useState(!urlRoomCode);
+  const [joinRoomInput, setJoinRoomInput] = useState('');
+  
+  const [settings, setSettings] = useState({
+    climbDuration: 240, transitionDuration: 30, prepDuration: 0, warningTime: 60,
+    enableAutoTransition: true, voiceAnnouncements: false, showClock: true,
+    showScoring: true, showBoulderNumber: true, category: '',
+    griptoniteUrl: '', compName: 'Three Rivers Rumble',
+  });
+  
+  const [timerState, setTimerState] = useState({
+    isRunning: false, phase: 'idle', timeRemaining: 240, round: 1, phaseStartTime: null,
+  });
+  
+  const [climberInfo, setClimberInfo] = useState({ name: '', number: '' });
+  const [climberQueue, setClimberQueue] = useState([]);
+  const [attempts, setAttempts] = useState(0);
+  const [tops, setTops] = useState(0);
+  const [zones, setZones] = useState(0);
+  const [boulderNumber, setBoulderNumber] = useState(1);
+  const [intermission, setIntermission] = useState({ active: false, message: 'Intermission', duration: 300 });
+  
+  // UI State
+  const [showSettings, setShowSettings] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardSettings, setLeaderboardSettings] = useState({
+    position: 'bottom-right',
+    size: 'medium',
+    opacity: 0.95,
+    offsetX: 0,
+    offsetY: 0,
+    zoom: 100,
+    barHeight: 250,
+  });
+  const [showCropControls, setShowCropControls] = useState(false);
+  const [showIntermission, setShowIntermission] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('timer');
+  const [soundEnabled, setSoundEnabled] = useState(!isDisplayMode);
+  const [copied, setCopied] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [peerCount, setPeerCount] = useState(0);
+  const [peerError, setPeerError] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Refs
+  const containerRef = useRef(null);
+  const lastSecondRef = useRef(null);
+  const phaseRef = useRef(timerState.phase);
+  const peerRef = useRef(null);
+  const connectionsRef = useRef([]);
+  const timerStateRef = useRef(timerState);
+  const settingsRef = useRef(settings);
+  const climberInfoRef = useRef(climberInfo);
+  const attemptsRef = useRef(attempts);
+  const topsRef = useRef(tops);
+  const zonesRef = useRef(zones);
+  const fileInputRef = useRef(null);
+  
+  const { playCountdownBeep, playEndBeep, playWarningBeep, playAlertBeep, getCtx } = useAudio();
+  const { speak } = useVoice(settings.voiceAnnouncements && soundEnabled);
+  const { isLocked, requestWakeLock, releaseWakeLock } = useWakeLock();
+  
+  // Keep refs updated
+  useEffect(() => { timerStateRef.current = timerState; }, [timerState]);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+  useEffect(() => { climberInfoRef.current = climberInfo; }, [climberInfo]);
+  useEffect(() => { phaseRef.current = timerState.phase; }, [timerState.phase]);
+  useEffect(() => { attemptsRef.current = attempts; }, [attempts]);
+  useEffect(() => { topsRef.current = tops; }, [tops]);
+  useEffect(() => { zonesRef.current = zones; }, [zones]);
+  
+  // Clock
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Broadcast
+  const broadcastState = useCallback(() => {
+    const data = { 
+      type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, 
+      climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current,
+      zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings
     };
-
-    // Audio Hook
-    const useAudio = () => {
-      const audioCtxRef = useRef(null);
-      const getCtx = useCallback(() => {
-        if (!audioCtxRef.current || audioCtxRef.current.state === 'closed')
-          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
-        return audioCtxRef.current;
-      }, []);
-      const playBeep = useCallback((freq = 880, dur = 0.15, type = 'sine', vol = 0.5) => {
-        try {
-          const ctx = getCtx();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.frequency.value = freq; osc.type = type;
-          gain.gain.setValueAtTime(vol, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
-          osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur);
-        } catch (e) {}
-      }, [getCtx]);
-      return {
-        playCountdownBeep: useCallback(() => playBeep(880, 0.15, 'sine', 0.6), [playBeep]),
-        playEndBeep: useCallback(() => playBeep(880, 1.5, 'square', 0.7), [playBeep]),
-        playWarningBeep: useCallback(() => { playBeep(880, 0.15, 'sine', 0.6); setTimeout(() => playBeep(880, 0.15, 'sine', 0.6), 200); }, [playBeep]),
-        playAlertBeep: useCallback(() => playBeep(550, 0.3, 'sine', 0.5), [playBeep]),
-        getCtx
-      };
-    };
-
-    // Voice Hook
-    const useVoice = (enabled) => {
-      const speak = useCallback((text) => {
-        if (!enabled || !window.speechSynthesis) return;
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 1.1; u.pitch = 1; u.volume = 1;
-        window.speechSynthesis.speak(u);
-      }, [enabled]);
-      return { speak };
-    };
-
-    // Wake Lock Hook
-    const useWakeLock = () => {
-      const wakeLockRef = useRef(null);
-      const [isLocked, setIsLocked] = useState(false);
-      const requestWakeLock = useCallback(async () => {
-        try {
-          if ('wakeLock' in navigator) {
-            wakeLockRef.current = await navigator.wakeLock.request('screen');
-            setIsLocked(true);
-            wakeLockRef.current.addEventListener('release', () => setIsLocked(false));
-          }
-        } catch (e) {}
-      }, []);
-      const releaseWakeLock = useCallback(() => {
-        if (wakeLockRef.current) { wakeLockRef.current.release(); wakeLockRef.current = null; setIsLocked(false); }
-      }, []);
-      return { isLocked, requestWakeLock, releaseWakeLock };
-    };
-
-    // Timer Presets
-    const PRESETS = {
-      qualifiers: { name: 'Qualifiers', climbDuration: 240, transitionDuration: 30, prepDuration: 0 },
-      semifinals: { name: 'Semi-Finals', climbDuration: 300, transitionDuration: 45, prepDuration: 0 },
-      finals: { name: 'Finals', climbDuration: 240, transitionDuration: 0, prepDuration: 60 },
-      redpoint: { name: 'Redpoint', climbDuration: 300, transitionDuration: 60, prepDuration: 0 },
-      onsight: { name: 'Onsight', climbDuration: 240, transitionDuration: 0, prepDuration: 120 },
-    };
-
-    // Icons
-    const Icons = {
-      Play: () => <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
-      Pause: () => <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>,
-      Reset: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
-      Skip: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4" fill="white"/><line x1="19" y1="5" x2="19" y2="19"/></svg>,
-      Settings: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
-      QR: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>,
-      Volume: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
-      Mute: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>,
-      Fullscreen: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>,
-      Sync: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>,
-      Users: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-      Check: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
-      Copy: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
-      Clock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
-      Plus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-      Minus: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-      Mic: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>,
-      MicOff: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .74-.11 1.45-.32 2.12"/><line x1="12" y1="19" x2="12" y2="22"/></svg>,
-      Keyboard: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>,
-      Upload: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-      Download: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-      Trophy: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
-      Coffee: () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>,
-      ExternalLink: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
-      BarChart: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
-      X: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-      Crop: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2v4"/><path d="M6 18H2"/><path d="M6 10v8h8"/><path d="M18 22v-4"/><path d="M18 6h4"/><path d="M18 14V6h-8"/></svg>,
-      Move: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>,
-    };
-
-    // Toggle Component
-    const Toggle = ({ value, onChange, disabled }) => (
-      <button onClick={() => !disabled && onChange(!value)} disabled={disabled}
-        className="toggle-track" style={{ background: value ? '#059669' : 'rgba(255,255,255,0.2)', opacity: disabled ? 0.5 : 1 }}>
-        <div className="toggle-thumb" style={{ left: value ? '1.5rem' : '0.25rem' }} />
-      </button>
-    );
-
-    // Main Component
-    function ClimbingTimer() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlRoomCode = urlParams.get('room');
-      const isDisplayMode = urlParams.get('display') === '1';
-      
-      // Core State
-      const [roomCode, setRoomCode] = useState(urlRoomCode || '');
-      const [isHost, setIsHost] = useState(!urlRoomCode);
-      const [joinRoomInput, setJoinRoomInput] = useState('');
-      
-      const [settings, setSettings] = useState({
-        climbDuration: 240, transitionDuration: 30, prepDuration: 0, warningTime: 60,
-        enableAutoTransition: true, voiceAnnouncements: false, showClock: true,
-        showScoring: true, showBoulderNumber: true, category: '',
-        griptoniteUrl: '', compName: 'Three Rivers Rumble',
-      });
-      
-      const [timerState, setTimerState] = useState({
-        isRunning: false, phase: 'idle', timeRemaining: 240, round: 1, phaseStartTime: null,
-      });
-      
-      const [climberInfo, setClimberInfo] = useState({ name: '', number: '' });
-      const [climberQueue, setClimberQueue] = useState([]);
-      const [attempts, setAttempts] = useState(0);
-      const [tops, setTops] = useState(0);
-      const [zones, setZones] = useState(0);
-      const [boulderNumber, setBoulderNumber] = useState(1);
-      const [intermission, setIntermission] = useState({ active: false, message: 'Intermission', duration: 300 });
-      
-      // UI State
-      const [showSettings, setShowSettings] = useState(false);
-      const [showQR, setShowQR] = useState(false);
-      const [showJoinModal, setShowJoinModal] = useState(false);
-      const [showShortcuts, setShowShortcuts] = useState(false);
-      const [showLeaderboard, setShowLeaderboard] = useState(false);
-      const [leaderboardSettings, setLeaderboardSettings] = useState({
-        position: 'bottom-right', // top-left, top-right, bottom-left, bottom-right, bottom-bar
-        size: 'medium', // small, medium, large
-        opacity: 0.95,
-        // Crop/pan settings
-        offsetX: 0, // pixels to shift left (positive = show more right side)
-        offsetY: 0, // pixels to shift up (positive = show more bottom)
-        zoom: 100, // percentage zoom
-        barHeight: 250, // height for bottom-bar mode
-      });
-      const [showCropControls, setShowCropControls] = useState(false);
-      const [showIntermission, setShowIntermission] = useState(false);
-      const [settingsTab, setSettingsTab] = useState('timer');
-      const [soundEnabled, setSoundEnabled] = useState(!isDisplayMode);
-      const [copied, setCopied] = useState(false);
-      const [connected, setConnected] = useState(false);
-      const [peerCount, setPeerCount] = useState(0);
-      const [peerError, setPeerError] = useState(null);
-      const [currentTime, setCurrentTime] = useState(new Date());
-      
-      // Refs
-      const containerRef = useRef(null);
-      const lastSecondRef = useRef(null);
-      const phaseRef = useRef(timerState.phase);
-      const peerRef = useRef(null);
-      const connectionsRef = useRef([]);
-      const timerStateRef = useRef(timerState);
-      const settingsRef = useRef(settings);
-      const climberInfoRef = useRef(climberInfo);
-      const attemptsRef = useRef(attempts);
-      const topsRef = useRef(tops);
-      const zonesRef = useRef(zones);
-      const fileInputRef = useRef(null);
-      
-      const { playCountdownBeep, playEndBeep, playWarningBeep, playAlertBeep, getCtx } = useAudio();
-      const { speak } = useVoice(settings.voiceAnnouncements && soundEnabled);
-      const { isLocked, requestWakeLock, releaseWakeLock } = useWakeLock();
-      
-      // Keep refs updated
-      useEffect(() => { timerStateRef.current = timerState; }, [timerState]);
-      useEffect(() => { settingsRef.current = settings; }, [settings]);
-      useEffect(() => { climberInfoRef.current = climberInfo; }, [climberInfo]);
-      useEffect(() => { phaseRef.current = timerState.phase; }, [timerState.phase]);
-      useEffect(() => { attemptsRef.current = attempts; }, [attempts]);
-      useEffect(() => { topsRef.current = tops; }, [tops]);
-      useEffect(() => { zonesRef.current = zones; }, [zones]);
-      
-      // Clock
-      useEffect(() => {
-        const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(interval);
-      }, []);
-      
-      // Broadcast
-      const broadcastState = useCallback(() => {
-        const data = { 
-          type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, 
-          climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current,
-          zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings
-        };
-        connectionsRef.current.forEach(conn => { if (conn?.open) try { conn.send(data); } catch (e) {} });
-      }, [boulderNumber, intermission, showLeaderboard, leaderboardSettings]);
-      
-      const handleReceivedState = useCallback((data) => {
-        if (data.type === 'state') {
-          setTimerState(data.timerState);
-          setSettings(data.settings);
-          setClimberInfo(data.climberInfo || { name: '', number: '' });
-          if (data.attempts !== undefined) setAttempts(data.attempts);
-          if (data.tops !== undefined) setTops(data.tops);
-          if (data.zones !== undefined) setZones(data.zones);
-          if (data.boulderNumber !== undefined) setBoulderNumber(data.boulderNumber);
-          if (data.intermission !== undefined) setIntermission(data.intermission);
-          if (data.showLeaderboard !== undefined) setShowLeaderboard(data.showLeaderboard);
-          if (data.leaderboardSettings !== undefined) setLeaderboardSettings(data.leaderboardSettings);
-        }
-      }, []);
-      
-      // PeerJS
-      useEffect(() => {
-        if (!roomCode) return;
-        const peerId = isHost ? `trr-${roomCode}` : `trr-${roomCode}-${Date.now()}`;
-        const peer = new Peer(peerId, { debug: 0 });
-        peerRef.current = peer;
-        
-        peer.on('open', () => {
-          setConnected(true); setPeerError(null);
-          if (!isHost) {
-            const conn = peer.connect(`trr-${roomCode}`, { reliable: true });
-            conn.on('open', () => { connectionsRef.current = [conn]; setPeerCount(1); conn.send({ type: 'requestState' }); });
-            conn.on('data', handleReceivedState);
-            conn.on('close', () => { setPeerCount(0); setPeerError('Disconnected'); });
-          }
+    connectionsRef.current.forEach(conn => { if (conn?.open) try { conn.send(data); } catch (e) {} });
+  }, [boulderNumber, intermission, showLeaderboard, leaderboardSettings]);
+  
+  const handleReceivedState = useCallback((data) => {
+    if (data.type === 'state') {
+      setTimerState(data.timerState);
+      setSettings(data.settings);
+      setClimberInfo(data.climberInfo || { name: '', number: '' });
+      if (data.attempts !== undefined) setAttempts(data.attempts);
+      if (data.tops !== undefined) setTops(data.tops);
+      if (data.zones !== undefined) setZones(data.zones);
+      if (data.boulderNumber !== undefined) setBoulderNumber(data.boulderNumber);
+      if (data.intermission !== undefined) setIntermission(data.intermission);
+      if (data.showLeaderboard !== undefined) setShowLeaderboard(data.showLeaderboard);
+      if (data.leaderboardSettings !== undefined) setLeaderboardSettings(data.leaderboardSettings);
+    }
+  }, []);
+  
+  // PeerJS
+  useEffect(() => {
+    if (!roomCode) return;
+    const peerId = isHost ? `trr-${roomCode}` : `trr-${roomCode}-${Date.now()}`;
+    const peer = new Peer(peerId, { debug: 0 });
+    peerRef.current = peer;
+    
+    peer.on('open', () => {
+      setConnected(true); setPeerError(null);
+      if (!isHost) {
+        const conn = peer.connect(`trr-${roomCode}`, { reliable: true });
+        conn.on('open', () => { connectionsRef.current = [conn]; setPeerCount(1); conn.send({ type: 'requestState' }); });
+        conn.on('data', handleReceivedState);
+        conn.on('close', () => { setPeerCount(0); setPeerError('Disconnected'); });
+      }
+    });
+    
+    if (isHost) {
+      peer.on('connection', (conn) => {
+        conn.on('open', () => {
+          connectionsRef.current.push(conn);
+          setPeerCount(connectionsRef.current.length);
+          conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings });
         });
-        
-        if (isHost) {
-          peer.on('connection', (conn) => {
-            conn.on('open', () => {
-              connectionsRef.current.push(conn);
-              setPeerCount(connectionsRef.current.length);
-              conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings });
-            });
-            conn.on('data', (data) => {
-              if (data.type === 'requestState') conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings });
-            });
-            conn.on('close', () => { connectionsRef.current = connectionsRef.current.filter(c => c !== conn); setPeerCount(connectionsRef.current.length); });
-          });
-        }
-        
-        peer.on('error', (err) => {
-          if (err.type === 'unavailable-id') setPeerError('Room exists');
-          else if (err.type === 'peer-unavailable') setPeerError('Room not found');
-          else setPeerError('Connection error');
+        conn.on('data', (data) => {
+          if (data.type === 'requestState') conn.send({ type: 'state', timerState: timerStateRef.current, settings: settingsRef.current, climberInfo: climberInfoRef.current, attempts: attemptsRef.current, tops: topsRef.current, zones: zonesRef.current, boulderNumber, intermission, showLeaderboard, leaderboardSettings });
         });
-        
-        return () => {
-          connectionsRef.current.forEach(c => { try { c.close(); } catch(e) {} });
-          connectionsRef.current = [];
-          peer?.destroy();
-        };
-      }, [roomCode, isHost, handleReceivedState, boulderNumber, intermission, showLeaderboard, leaderboardSettings]);
+        conn.on('close', () => { connectionsRef.current = connectionsRef.current.filter(c => c !== conn); setPeerCount(connectionsRef.current.length); });
+      });
+    }
+    
+    peer.on('error', (err) => {
+      if (err.type === 'unavailable-id') setPeerError('Room exists');
+      else if (err.type === 'peer-unavailable') setPeerError('Room not found');
+      else setPeerError('Connection error');
+    });
+    
+    return () => {
+      connectionsRef.current.forEach(c => { try { c.close(); } catch(e) {} });
+      connectionsRef.current = [];
+      peer?.destroy();
+    };
+  }, [roomCode, isHost, handleReceivedState, boulderNumber, intermission, showLeaderboard, leaderboardSettings]);
+  
+  // Broadcast on change
+  useEffect(() => {
+    if (isHost && connected && roomCode) broadcastState();
+  }, [timerState, settings, climberInfo, attempts, tops, zones, boulderNumber, intermission, showLeaderboard, leaderboardSettings, isHost, connected, roomCode, broadcastState]);
+  
+  // Continuous sync
+  useEffect(() => {
+    if (!isHost || !connected || !timerState.isRunning) return;
+    const interval = setInterval(broadcastState, 250);
+    return () => clearInterval(interval);
+  }, [isHost, connected, timerState.isRunning, broadcastState]);
+  
+  const formatTime = (s) => `${Math.floor(Math.abs(s) / 60)}:${(Math.abs(s) % 60).toString().padStart(2, '0')}`;
+  const getPhaseDuration = (phase) => phase === 'prep' ? settings.prepDuration : phase === 'climb' ? settings.climbDuration : phase === 'transition' ? settings.transitionDuration : settings.climbDuration;
+  
+  // Timer loop
+  useEffect(() => {
+    if (!timerState.isRunning || !timerState.phaseStartTime) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const duration = getPhaseDuration(timerState.phase);
+      const elapsed = Math.floor((now - timerState.phaseStartTime) / 1000);
+      const remaining = Math.max(0, duration - elapsed);
+      setTimerState(prev => ({ ...prev, timeRemaining: remaining }));
       
-      // Broadcast on change
-      useEffect(() => {
-        if (isHost && connected && roomCode) broadcastState();
-      }, [timerState, settings, climberInfo, attempts, tops, zones, boulderNumber, intermission, showLeaderboard, leaderboardSettings, isHost, connected, roomCode, broadcastState]);
+      if (soundEnabled && remaining !== lastSecondRef.current && lastSecondRef.current !== null) {
+        const prevSec = lastSecondRef.current;
+        if (remaining === 3 && prevSec > 3) { playCountdownBeep(); speak('3'); }
+        else if (remaining === 2 && prevSec > 2) { playCountdownBeep(); speak('2'); }
+        else if (remaining === 1 && prevSec > 1) { playCountdownBeep(); speak('1'); }
+        else if (remaining === 0 && prevSec > 0) { playEndBeep(); speak(phaseRef.current === 'climb' ? 'Time' : 'Climb'); }
+        else if (phaseRef.current === 'climb' && remaining === settings.warningTime && prevSec > settings.warningTime) { playWarningBeep(); speak('One minute remaining'); }
+      }
+      lastSecondRef.current = remaining;
       
-      // Continuous sync
-      useEffect(() => {
-        if (!isHost || !connected || !timerState.isRunning) return;
-        const interval = setInterval(broadcastState, 250);
-        return () => clearInterval(interval);
-      }, [isHost, connected, timerState.isRunning, broadcastState]);
-      
-      const formatTime = (s) => `${Math.floor(Math.abs(s) / 60)}:${(Math.abs(s) % 60).toString().padStart(2, '0')}`;
-      const getPhaseDuration = (phase) => phase === 'prep' ? settings.prepDuration : phase === 'climb' ? settings.climbDuration : phase === 'transition' ? settings.transitionDuration : settings.climbDuration;
-      
-      // Timer loop
-      useEffect(() => {
-        if (!timerState.isRunning || !timerState.phaseStartTime) return;
-        const interval = setInterval(() => {
-          const now = Date.now();
-          const duration = getPhaseDuration(timerState.phase);
-          const elapsed = Math.floor((now - timerState.phaseStartTime) / 1000);
-          const remaining = Math.max(0, duration - elapsed);
-          setTimerState(prev => ({ ...prev, timeRemaining: remaining }));
-          
-          if (soundEnabled && remaining !== lastSecondRef.current && lastSecondRef.current !== null) {
-            const prevSec = lastSecondRef.current;
-            if (remaining === 3 && prevSec > 3) { playCountdownBeep(); speak('3'); }
-            else if (remaining === 2 && prevSec > 2) { playCountdownBeep(); speak('2'); }
-            else if (remaining === 1 && prevSec > 1) { playCountdownBeep(); speak('1'); }
-            else if (remaining === 0 && prevSec > 0) { playEndBeep(); speak(phaseRef.current === 'climb' ? 'Time' : 'Climb'); }
-            else if (phaseRef.current === 'climb' && remaining === settings.warningTime && prevSec > settings.warningTime) { playWarningBeep(); speak('One minute remaining'); }
-          }
-          lastSecondRef.current = remaining;
-          
-          if ((isHost || !roomCode) && remaining === 0 && elapsed >= duration && settings.enableAutoTransition) {
-            const t = timerState.phaseStartTime + duration * 1000;
-            setTimerState(prev => {
-              if (prev.phase === 'prep') return { ...prev, phase: 'climb', phaseStartTime: t, timeRemaining: settings.climbDuration };
-              if (prev.phase === 'climb') {
-                if (settings.transitionDuration === 0) {
-                  const np = settings.prepDuration > 0 ? 'prep' : 'climb';
-                  return { ...prev, round: prev.round + 1, phase: np, phaseStartTime: t, timeRemaining: settings.prepDuration || settings.climbDuration };
-                }
-                return { ...prev, phase: 'transition', phaseStartTime: t, timeRemaining: settings.transitionDuration };
-              }
-              const np = settings.prepDuration > 0 ? 'prep' : 'climb';
-              return { ...prev, phase: np, round: prev.round + 1, phaseStartTime: t, timeRemaining: settings.prepDuration || settings.climbDuration };
-            });
-          }
-        }, 50);
-        return () => clearInterval(interval);
-      }, [timerState.isRunning, timerState.phaseStartTime, timerState.phase, settings, soundEnabled, isHost, roomCode, speak]);
-      
-      // Wake lock
-      useEffect(() => {
-        if (timerState.isRunning && !isLocked) requestWakeLock();
-        else if (!timerState.isRunning && timerState.phase === 'idle' && isLocked) releaseWakeLock();
-      }, [timerState.isRunning, timerState.phase, isLocked, requestWakeLock, releaseWakeLock]);
-      
-      // Handlers
-      const handleStart = () => {
-        getCtx();
-        const now = Date.now();
-        const startPhase = settings.prepDuration > 0 ? 'prep' : 'climb';
-        const startDuration = settings.prepDuration > 0 ? settings.prepDuration : settings.climbDuration;
-        setTimerState(prev => ({
-          ...prev, isRunning: true,
-          phase: prev.phase === 'idle' ? startPhase : prev.phase,
-          phaseStartTime: now,
-          timeRemaining: prev.phase === 'idle' ? startDuration : prev.timeRemaining,
-        }));
-        if (soundEnabled && timerState.phase === 'idle') { playEndBeep(); speak(settings.prepDuration > 0 ? 'Observation' : 'Climb'); }
-      };
-      
-      const handlePause = () => setTimerState(prev => ({ ...prev, isRunning: false }));
-      
-      const handleReset = () => {
-        setTimerState({ isRunning: false, phase: 'idle', timeRemaining: settings.climbDuration, round: 1, phaseStartTime: null });
-        lastSecondRef.current = null;
-        setAttempts(0); setTops(0); setZones(0);
-      };
-      
-      const handleSkip = () => {
-        const now = Date.now();
+      if ((isHost || !roomCode) && remaining === 0 && elapsed >= duration && settings.enableAutoTransition) {
+        const t = timerState.phaseStartTime + duration * 1000;
         setTimerState(prev => {
-          if (prev.phase === 'prep') return { ...prev, phase: 'climb', phaseStartTime: now, timeRemaining: settings.climbDuration };
+          if (prev.phase === 'prep') return { ...prev, phase: 'climb', phaseStartTime: t, timeRemaining: settings.climbDuration };
           if (prev.phase === 'climb') {
             if (settings.transitionDuration === 0) {
               const np = settings.prepDuration > 0 ? 'prep' : 'climb';
-              return { ...prev, round: prev.round + 1, phase: np, phaseStartTime: now, timeRemaining: settings.prepDuration || settings.climbDuration };
+              return { ...prev, round: prev.round + 1, phase: np, phaseStartTime: t, timeRemaining: settings.prepDuration || settings.climbDuration };
             }
-            return { ...prev, phase: 'transition', phaseStartTime: now, timeRemaining: settings.transitionDuration };
+            return { ...prev, phase: 'transition', phaseStartTime: t, timeRemaining: settings.transitionDuration };
           }
           const np = settings.prepDuration > 0 ? 'prep' : 'climb';
-          return { ...prev, phase: np, round: prev.round + 1, phaseStartTime: now, timeRemaining: settings.prepDuration || settings.climbDuration };
+          return { ...prev, phase: np, round: prev.round + 1, phaseStartTime: t, timeRemaining: settings.prepDuration || settings.climbDuration };
         });
-      };
-      
-      const handleAddTime = (seconds) => {
-        setTimerState(prev => ({
-          ...prev,
-          phaseStartTime: prev.phaseStartTime ? prev.phaseStartTime + (seconds * 1000) : prev.phaseStartTime,
-          timeRemaining: Math.max(0, prev.timeRemaining + seconds),
-        }));
-      };
-      
-      const nextClimber = () => {
-        if (climberQueue.length > 0) {
-          const [next, ...rest] = climberQueue;
-          setClimberInfo({ name: next.name, number: next.number });
-          setClimberQueue(rest);
-          setAttempts(0); setTops(0); setZones(0);
-        }
-      };
-      
-      const toggleFullscreen = () => {
-        if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
-        else document.exitFullscreen();
-      };
-      
-      const createRoom = () => { setRoomCode(Math.random().toString(36).substring(2, 8).toUpperCase()); setIsHost(true); };
-      const joinRoom = () => { if (joinRoomInput.trim()) { setRoomCode(joinRoomInput.trim().toUpperCase()); setIsHost(false); setShowJoinModal(false); } };
-      const copyToClipboard = (text) => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-      const getSyncUrl = () => `${window.location.origin}${window.location.pathname}?room=${roomCode}&display=1`;
-      
-      const applyPreset = (presetKey) => {
-        const preset = PRESETS[presetKey];
-        setSettings(s => ({ ...s, climbDuration: preset.climbDuration, transitionDuration: preset.transitionDuration, prepDuration: preset.prepDuration }));
-      };
-      
-      // CSV Import
-      const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const text = ev.target.result;
-          const lines = text.split('\n').filter(l => l.trim());
-          const climbers = lines.slice(1).map(line => {
-            const parts = line.split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
-            return { number: parts[0] || '', name: parts[1] || parts[0] || '' };
-          }).filter(c => c.name);
-          setClimberQueue(climbers);
-        };
-        reader.readAsText(file);
-        e.target.value = '';
-      };
-      
-      // Export Results
-      const exportResults = () => {
-        const data = [
-          ['Number', 'Name', 'Attempts', 'Tops', 'Zones'],
-          [climberInfo.number, climberInfo.name, attempts, tops, zones]
-        ];
-        const csv = data.map(row => row.join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'results.csv'; a.click();
-        URL.revokeObjectURL(url);
-      };
-      
-      // Keyboard Shortcuts
-      useEffect(() => {
-        const canControl = isHost || !roomCode;
-        if (!canControl) return;
-        const handleKeyDown = (e) => {
-          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-          switch (e.code) {
-            case 'Space': e.preventDefault(); timerState.isRunning ? handlePause() : handleStart(); break;
-            case 'KeyS': if (timerState.phase !== 'idle') handleSkip(); break;
-            case 'KeyR': handleReset(); break;
-            case 'KeyM': getCtx(); setSoundEnabled(s => !s); break;
-            case 'KeyF': toggleFullscreen(); break;
-            case 'KeyN': nextClimber(); break;
-            case 'KeyA': setAttempts(a => a + 1); break;
-            case 'KeyT': setTops(t => t + 1); break;
-            case 'KeyZ': setZones(z => z + 1); break;
-            case 'KeyB': setBoulderNumber(b => b + 1); break;
-            case 'KeyI': setShowIntermission(true); break;
-            case 'KeyL': 
-              if (settings.griptoniteUrl) setShowLeaderboard(s => !s); 
-              break;
-            case 'KeyP': 
-              if (showLeaderboard) {
-                const positions = ['bottom-right', 'bottom-left', 'top-right', 'top-left', 'bottom-bar'];
-                setLeaderboardSettings(s => ({ ...s, position: positions[(positions.indexOf(s.position) + 1) % positions.length] }));
-              }
-              break;
-            case 'BracketLeft':
-              if (showLeaderboard) {
-                const sizes = ['small', 'medium', 'large'];
-                setLeaderboardSettings(s => ({ ...s, size: sizes[Math.max(0, sizes.indexOf(s.size) - 1)] }));
-              }
-              break;
-            case 'BracketRight':
-              if (showLeaderboard) {
-                const sizes = ['small', 'medium', 'large'];
-                setLeaderboardSettings(s => ({ ...s, size: sizes[Math.min(sizes.length - 1, sizes.indexOf(s.size) + 1)] }));
-              }
-              break;
-            case 'ArrowUp': e.preventDefault(); if (timerState.phase !== 'idle') handleAddTime(5); break;
-            case 'ArrowDown': e.preventDefault(); if (timerState.phase !== 'idle') handleAddTime(-5); break;
-            case 'Slash': if (e.shiftKey) setShowShortcuts(s => !s); break;
-            case 'Escape': setShowSettings(false); setShowQR(false); setShowJoinModal(false); setShowShortcuts(false); setShowLeaderboard(false); setShowIntermission(false); break;
-          }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-      }, [timerState.isRunning, timerState.phase, isHost, roomCode, climberQueue]);
-      
-      const getPhaseLabel = () => {
-        if (intermission.active) return '☕ INTERMISSION';
-        switch (timerState.phase) {
-          case 'prep': return '⏳ OBSERVATION';
-          case 'climb': return '🧗 CLIMB';
-          case 'transition': return '🔄 TRANSITION';
-          default: return 'READY';
-        }
-      };
-      
-      const getPhaseColor = () => {
-        if (intermission.active) return 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)';
-        switch (timerState.phase) {
-          case 'prep': return 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)';
-          case 'climb': return 'linear-gradient(135deg, #059669 0%, #064e3b 100%)';
-          case 'transition': return 'linear-gradient(135deg, #f59e0b 0%, #c2410c 100%)';
-          default: return 'linear-gradient(135deg, #334155 0%, #0f172a 100%)';
-        }
-      };
-      
-      const getTimeColor = () => {
-        if (timerState.timeRemaining <= 3 && timerState.timeRemaining > 0) return '#f87171';
-        if (timerState.timeRemaining <= settings.warningTime && timerState.phase === 'climb') return '#fde047';
-        return 'white';
-      };
-      
-      const progressPct = timerState.phase !== 'idle' ? ((getPhaseDuration(timerState.phase) - timerState.timeRemaining) / getPhaseDuration(timerState.phase)) * 100 : 0;
-      const canControl = isHost || !roomCode;
-
-      // Intermission View
-      if (intermission.active) {
-        return (
-          <div ref={containerRef} style={{ minHeight: '100vh', background: getPhaseColor(), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-            <Icons.Coffee />
-            <div style={{ fontSize: 'clamp(2rem, 8vw, 5rem)', fontWeight: 'bold', color: 'white', marginTop: '2rem', textAlign: 'center' }}>
-              {intermission.message}
-            </div>
-            {settings.griptoniteUrl && (
-              <div style={{ marginTop: '2rem', color: 'rgba(255,255,255,0.8)', fontSize: '1.25rem' }}>
-                Live results: <a href={settings.griptoniteUrl} target="_blank" style={{ color: 'white' }}>{settings.griptoniteUrl}</a>
-              </div>
-            )}
-            {canControl && (
-              <button onClick={() => setIntermission(i => ({ ...i, active: false }))} style={{ marginTop: '3rem', padding: '1rem 2rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem' }}>
-                End Intermission
-              </button>
-            )}
-            <div style={{ position: 'absolute', bottom: '1rem', color: 'rgba(255,255,255,0.4)' }}>{settings.compName}</div>
-          </div>
-        );
       }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [timerState.isRunning, timerState.phaseStartTime, timerState.phase, settings, soundEnabled, isHost, roomCode, speak]);
+  
+  // Wake lock
+  useEffect(() => {
+    if (timerState.isRunning && !isLocked) requestWakeLock();
+    else if (!timerState.isRunning && timerState.phase === 'idle' && isLocked) releaseWakeLock();
+  }, [timerState.isRunning, timerState.phase, isLocked, requestWakeLock, releaseWakeLock]);
 
-      return (
-        <div ref={containerRef} style={{ minHeight: '100vh', background: getPhaseColor(), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem', transition: 'background 0.5s', position: 'relative' }}>
+  // Also unlock audio on any touch/click event for mobile
+  useEffect(() => {
+    const unlockAudio = () => { getCtx(); };
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    };
+  }, [getCtx]);
+  
+  // Handlers
+  const handleStart = () => {
+    getCtx(); // Ensure audio context is unlocked on this user gesture
+    const now = Date.now();
+    const startPhase = settings.prepDuration > 0 ? 'prep' : 'climb';
+    const startDuration = settings.prepDuration > 0 ? settings.prepDuration : settings.climbDuration;
+    setTimerState(prev => ({
+      ...prev, isRunning: true,
+      phase: prev.phase === 'idle' ? startPhase : prev.phase,
+      phaseStartTime: now,
+      timeRemaining: prev.phase === 'idle' ? startDuration : prev.timeRemaining,
+    }));
+    if (soundEnabled && timerState.phase === 'idle') { playEndBeep(); speak(settings.prepDuration > 0 ? 'Observation' : 'Climb'); }
+  };
+  
+  const handlePause = () => setTimerState(prev => ({ ...prev, isRunning: false }));
+  
+  const handleReset = () => {
+    setTimerState({ isRunning: false, phase: 'idle', timeRemaining: settings.climbDuration, round: 1, phaseStartTime: null });
+    lastSecondRef.current = null;
+    setAttempts(0); setTops(0); setZones(0);
+  };
+  
+  const handleSkip = () => {
+    const now = Date.now();
+    setTimerState(prev => {
+      if (prev.phase === 'prep') return { ...prev, phase: 'climb', phaseStartTime: now, timeRemaining: settings.climbDuration };
+      if (prev.phase === 'climb') {
+        if (settings.transitionDuration === 0) {
+          const np = settings.prepDuration > 0 ? 'prep' : 'climb';
+          return { ...prev, round: prev.round + 1, phase: np, phaseStartTime: now, timeRemaining: settings.prepDuration || settings.climbDuration };
+        }
+        return { ...prev, phase: 'transition', phaseStartTime: now, timeRemaining: settings.transitionDuration };
+      }
+      const np = settings.prepDuration > 0 ? 'prep' : 'climb';
+      return { ...prev, phase: np, round: prev.round + 1, phaseStartTime: now, timeRemaining: settings.prepDuration || settings.climbDuration };
+    });
+  };
+  
+  const handleAddTime = (seconds) => {
+    setTimerState(prev => ({
+      ...prev,
+      phaseStartTime: prev.phaseStartTime ? prev.phaseStartTime + (seconds * 1000) : prev.phaseStartTime,
+      timeRemaining: Math.max(0, prev.timeRemaining + seconds),
+    }));
+  };
+  
+  const nextClimber = () => {
+    if (climberQueue.length > 0) {
+      const [next, ...rest] = climberQueue;
+      setClimberInfo({ name: next.name, number: next.number });
+      setClimberQueue(rest);
+      setAttempts(0); setTops(0); setZones(0);
+    }
+  };
+  
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
+    else document.exitFullscreen();
+  };
+  
+  const createRoom = () => { setRoomCode(Math.random().toString(36).substring(2, 8).toUpperCase()); setIsHost(true); };
+  const joinRoom = () => { if (joinRoomInput.trim()) { setRoomCode(joinRoomInput.trim().toUpperCase()); setIsHost(false); setShowJoinModal(false); } };
+  const copyToClipboard = (text) => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const getSyncUrl = () => `${window.location.origin}${window.location.pathname}?room=${roomCode}&display=1`;
+  
+  const applyPreset = (presetKey) => {
+    const preset = PRESETS[presetKey];
+    setSettings(s => ({ ...s, climbDuration: preset.climbDuration, transitionDuration: preset.transitionDuration, prepDuration: preset.prepDuration }));
+  };
+  
+  // CSV Import
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      const climbers = lines.slice(1).map(line => {
+        const parts = line.split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
+        return { number: parts[0] || '', name: parts[1] || parts[0] || '' };
+      }).filter(c => c.name);
+      setClimberQueue(climbers);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+  
+  // Export Results
+  const exportResults = () => {
+    const data = [
+      ['Number', 'Name', 'Attempts', 'Tops', 'Zones'],
+      [climberInfo.number, climberInfo.name, attempts, tops, zones]
+    ];
+    const csv = data.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'results.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const canControl = isHost || !roomCode;
+    if (!canControl) return;
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      switch (e.code) {
+        case 'Space': e.preventDefault(); timerState.isRunning ? handlePause() : handleStart(); break;
+        case 'KeyS': if (timerState.phase !== 'idle') handleSkip(); break;
+        case 'KeyR': handleReset(); break;
+        case 'KeyM': getCtx(); setSoundEnabled(s => !s); break;
+        case 'KeyF': toggleFullscreen(); break;
+        case 'KeyN': nextClimber(); break;
+        case 'KeyA': setAttempts(a => a + 1); break;
+        case 'KeyT': setTops(t => t + 1); break;
+        case 'KeyZ': setZones(z => z + 1); break;
+        case 'KeyB': setBoulderNumber(b => b + 1); break;
+        case 'KeyI': setShowIntermission(true); break;
+        case 'KeyL': 
+          if (settings.griptoniteUrl) setShowLeaderboard(s => !s); 
+          break;
+        case 'KeyP': 
+          if (showLeaderboard) {
+            const positions = ['bottom-right', 'bottom-left', 'top-right', 'top-left', 'bottom-bar'];
+            setLeaderboardSettings(s => ({ ...s, position: positions[(positions.indexOf(s.position) + 1) % positions.length] }));
+          }
+          break;
+        case 'BracketLeft':
+          if (showLeaderboard) {
+            const sizes = ['small', 'medium', 'large'];
+            setLeaderboardSettings(s => ({ ...s, size: sizes[Math.max(0, sizes.indexOf(s.size) - 1)] }));
+          }
+          break;
+        case 'BracketRight':
+          if (showLeaderboard) {
+            const sizes = ['small', 'medium', 'large'];
+            setLeaderboardSettings(s => ({ ...s, size: sizes[Math.min(sizes.length - 1, sizes.indexOf(s.size) + 1)] }));
+          }
+          break;
+        case 'ArrowUp': e.preventDefault(); if (timerState.phase !== 'idle') handleAddTime(5); break;
+        case 'ArrowDown': e.preventDefault(); if (timerState.phase !== 'idle') handleAddTime(-5); break;
+        case 'Slash': if (e.shiftKey) setShowShortcuts(s => !s); break;
+        case 'Escape': setShowSettings(false); setShowQR(false); setShowJoinModal(false); setShowShortcuts(false); setShowLeaderboard(false); setShowIntermission(false); break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [timerState.isRunning, timerState.phase, isHost, roomCode, climberQueue]);
+  
+  const getPhaseLabel = () => {
+    if (intermission.active) return '☕ INTERMISSION';
+    switch (timerState.phase) {
+      case 'prep': return '⏳ OBSERVATION';
+      case 'climb': return '🧗 CLIMB';
+      case 'transition': return '🔄 TRANSITION';
+      default: return 'READY';
+    }
+  };
+  
+  const getPhaseColor = () => {
+    if (intermission.active) return 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)';
+    switch (timerState.phase) {
+      case 'prep': return 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)';
+      case 'climb': return 'linear-gradient(135deg, #059669 0%, #064e3b 100%)';
+      case 'transition': return 'linear-gradient(135deg, #f59e0b 0%, #c2410c 100%)';
+      default: return 'linear-gradient(135deg, #334155 0%, #0f172a 100%)';
+    }
+  };
+  
+  const getTimeColor = () => {
+    if (timerState.timeRemaining <= 3 && timerState.timeRemaining > 0) return '#f87171';
+    if (timerState.timeRemaining <= settings.warningTime && timerState.phase === 'climb') return '#fde047';
+    return 'white';
+  };
+  
+  const progressPct = timerState.phase !== 'idle' ? ((getPhaseDuration(timerState.phase) - timerState.timeRemaining) / getPhaseDuration(timerState.phase)) * 100 : 0;
+  const canControl = isHost || !roomCode;
+
+  // Intermission View
+  if (intermission.active) {
+    return (
+      <div ref={containerRef} style={{ minHeight: '100vh', background: getPhaseColor(), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <Icons.Coffee />
+        <div style={{ fontSize: 'clamp(2rem, 8vw, 5rem)', fontWeight: 'bold', color: 'white', marginTop: '2rem', textAlign: 'center' }}>
+          {intermission.message}
+        </div>
+        {settings.griptoniteUrl && (
+          <div style={{ marginTop: '2rem', color: 'rgba(255,255,255,0.8)', fontSize: '1.25rem' }}>
+            Live results: <a href={settings.griptoniteUrl} target="_blank" style={{ color: 'white' }}>{settings.griptoniteUrl}</a>
+          </div>
+        )}
+        {canControl && (
+          <button onClick={() => setIntermission(i => ({ ...i, active: false }))} style={{ marginTop: '3rem', padding: '1rem 2rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem' }}>
+            End Intermission
+          </button>
+        )}
+        <div style={{ position: 'absolute', bottom: '1rem', color: 'rgba(255,255,255,0.4)' }}>{settings.compName}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} style={{ minHeight: '100vh', background: getPhaseColor(), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1rem', transition: 'background 0.5s', position: 'relative' }}>
+      
+      {/* Progress Bar */}
+      {timerState.phase !== 'idle' && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'rgba(0,0,0,0.3)' }}>
+          <div style={{ height: '100%', background: 'rgba(255,255,255,0.8)', width: `${progressPct}%`, transition: 'width 0.1s' }} />
+        </div>
+      )}
+      
+      {/* Header */}
+      <div style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {settings.showClock && (
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Icons.Clock /> {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.5rem', fontWeight: 'bold' }}>Round {timerState.round}</span>
+            {settings.showBoulderNumber && settings.showScoring && (
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem' }}>• Boulder {boulderNumber}</span>
+            )}
+          </div>
+          {settings.category && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>{settings.category}</span>}
+          {climberInfo.name && <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.125rem' }}>{climberInfo.number && `#${climberInfo.number} `}{climberInfo.name}</span>}
           
-          {/* Progress Bar */}
-          {timerState.phase !== 'idle' && (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'rgba(0,0,0,0.3)' }}>
-              <div style={{ height: '100%', background: 'rgba(255,255,255,0.8)', width: `${progressPct}%`, transition: 'width 0.1s' }} />
+          {/* Scoring */}
+          {settings.showScoring && (timerState.phase === 'climb' || attempts > 0 || tops > 0) && canControl && (
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+              {[
+                { label: 'ATT', value: attempts, setter: setAttempts },
+                { label: 'TOP', value: tops, setter: setTops },
+                { label: 'ZONE', value: zones, setter: setZones },
+              ].map(({ label, value, setter }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>{label}:</span>
+                  <button onClick={() => setter(v => Math.max(0, v - 1))} style={{ padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white' }}><Icons.Minus /></button>
+                  <span style={{ color: 'white', fontSize: '1.25rem', fontWeight: 'bold', minWidth: '1.5rem', textAlign: 'center' }}>{value}</span>
+                  <button onClick={() => setter(v => v + 1)} style={{ padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white' }}><Icons.Plus /></button>
+                </div>
+              ))}
             </div>
           )}
           
-          {/* Header */}
-          <div style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {settings.showClock && (
-                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Icons.Clock /> {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.5rem', fontWeight: 'bold' }}>Round {timerState.round}</span>
-                {settings.showBoulderNumber && settings.showScoring && (
-                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem' }}>• Boulder {boulderNumber}</span>
-                )}
-              </div>
-              {settings.category && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>{settings.category}</span>}
-              {climberInfo.name && <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.125rem' }}>{climberInfo.number && `#${climberInfo.number} `}{climberInfo.name}</span>}
-              
-              {/* Scoring */}
-              {settings.showScoring && (timerState.phase === 'climb' || attempts > 0 || tops > 0) && canControl && (
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-                  {[
-                    { label: 'ATT', value: attempts, setter: setAttempts },
-                    { label: 'TOP', value: tops, setter: setTops },
-                    { label: 'ZONE', value: zones, setter: setZones },
-                  ].map(({ label, value, setter }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>{label}:</span>
-                      <button onClick={() => setter(v => Math.max(0, v - 1))} style={{ padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white' }}><Icons.Minus /></button>
-                      <span style={{ color: 'white', fontSize: '1.25rem', fontWeight: 'bold', minWidth: '1.5rem', textAlign: 'center' }}>{value}</span>
-                      <button onClick={() => setter(v => v + 1)} style={{ padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white' }}><Icons.Plus /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Sync Status */}
-              {roomCode && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ padding: '0.25rem 0.5rem', background: connected ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)', borderRadius: '0.25rem', color: 'white', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Icons.Sync /> {connected ? (isHost ? 'Hosting' : 'Synced') : 'Connecting...'}
-                  </span>
-                  {isHost && peerCount > 0 && <span style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.2)', borderRadius: '0.25rem', color: 'white', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Icons.Users /> {peerCount}</span>}
-                  <span style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.2)', borderRadius: '0.25rem', color: 'white', fontSize: '0.75rem', fontFamily: 'monospace' }}>{roomCode}</span>
-                </div>
-              )}
-              {peerError && <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{peerError}</span>}
+          {/* Sync Status */}
+          {roomCode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ padding: '0.25rem 0.5rem', background: connected ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)', borderRadius: '0.25rem', color: 'white', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Icons.Sync /> {connected ? (isHost ? 'Hosting' : 'Synced') : 'Connecting...'}
+              </span>
+              {isHost && peerCount > 0 && <span style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.2)', borderRadius: '0.25rem', color: 'white', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Icons.Users /> {peerCount}</span>}
+              <span style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.2)', borderRadius: '0.25rem', color: 'white', fontSize: '0.75rem', fontFamily: 'monospace' }}>{roomCode}</span>
             </div>
-            
-            {/* Top Controls */}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button onClick={() => { getCtx(); setSoundEnabled(!soundEnabled); }} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
-                {soundEnabled ? <Icons.Volume /> : <Icons.Mute />}
-              </button>
-              {canControl && (
-                <>
-                  <button onClick={() => setSettings(s => ({ ...s, voiceAnnouncements: !s.voiceAnnouncements }))} style={{ padding: '0.75rem', borderRadius: '9999px', background: settings.voiceAnnouncements ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)', border: 'none' }}>
-                    {settings.voiceAnnouncements ? <Icons.Mic /> : <Icons.MicOff />}
-                  </button>
-                  {settings.griptoniteUrl && (
-                    <button onClick={() => setShowLeaderboard(s => !s)} style={{ padding: '0.75rem', borderRadius: '9999px', background: showLeaderboard ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)', border: 'none' }} title="Toggle leaderboard overlay (L)">
-                      <Icons.Trophy />
-                    </button>
-                  )}
-                  <button onClick={() => setShowShortcuts(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
-                    <Icons.Keyboard />
-                  </button>
-                </>
-              )}
-              <button onClick={toggleFullscreen} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
-                <Icons.Fullscreen />
-              </button>
-              {canControl && (
-                <>
-                  <button onClick={() => setShowSettings(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
-                    <Icons.Settings />
-                  </button>
-                  <button onClick={() => setShowQR(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
-                    <Icons.QR />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Main Display */}
-          <div style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.95)' }}>{getPhaseLabel()}</div>
-
-          <div className="tabular-nums" style={{ fontSize: 'clamp(6rem, 28vw, 16rem)', fontFamily: 'ui-monospace, monospace', fontWeight: 'bold', color: getTimeColor(), lineHeight: 1, animation: timerState.timeRemaining <= 3 && timerState.timeRemaining > 0 && timerState.phase !== 'idle' ? 'pulse 1s infinite' : 'none' }}>
-            {formatTime(timerState.timeRemaining)}
-          </div>
-
-          <div style={{ marginTop: '0.5rem', color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem', textAlign: 'center' }}>
-            {timerState.phase === 'idle' && `${settings.prepDuration > 0 ? formatTime(settings.prepDuration) + ' obs • ' : ''}${formatTime(settings.climbDuration)} climb${settings.transitionDuration > 0 ? ' • ' + formatTime(settings.transitionDuration) + ' transition' : ''}`}
-            {timerState.phase === 'prep' && 'Climber may observe the wall'}
-            {timerState.phase === 'climb' && (settings.transitionDuration > 0 ? 'Transition begins when timer ends' : 'Next round begins when timer ends')}
-            {timerState.phase === 'transition' && `Round ${timerState.round + 1} starts when timer ends`}
-          </div>
-
-          {/* Controls */}
+          )}
+          {peerError && <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{peerError}</span>}
+        </div>
+        
+        {/* Top Controls */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button onClick={() => { getCtx(); setSoundEnabled(!soundEnabled); }} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
+            {soundEnabled ? <Icons.Volume /> : <Icons.Mute />}
+          </button>
           {canControl && (
-            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem' }}>
-                {!timerState.isRunning ? (
-                  <button onClick={handleStart} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
-                    <Icons.Play /> {timerState.phase === 'idle' ? 'Start' : 'Resume'}
-                  </button>
-                ) : (
-                  <button onClick={handlePause} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
-                    <Icons.Pause /> Pause
-                  </button>
-                )}
-                {timerState.phase !== 'idle' && (
-                  <>
-                    <button onClick={handleSkip} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem' }}>
-                      <Icons.Skip /> Skip
-                    </button>
-                    <button onClick={handleReset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem' }}>
-                      <Icons.Reset /> Reset
-                    </button>
-                  </>
-                )}
-              </div>
-              
-              {timerState.phase !== 'idle' && (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {[-10, -5, 5, 10].map(s => (
-                    <button key={s} onClick={() => handleAddTime(s)} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem' }}>
-                      {s > 0 ? '+' : ''}{s}s
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {/* Quick Actions */}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                {climberQueue.length > 0 && (
-                  <button onClick={nextClimber} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
-                    Next: {climberQueue[0]?.name || 'Unknown'} →
-                  </button>
-                )}
-                {settings.showScoring && settings.showBoulderNumber && (
-                  <button onClick={() => setBoulderNumber(b => b + 1)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
-                    Boulder {boulderNumber} → {boulderNumber + 1}
-                  </button>
-                )}
-                <button onClick={() => setIntermission(i => ({ ...i, active: true }))} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
-                  ☕ Intermission
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Room Creation */}
-          {!roomCode && timerState.phase === 'idle' && canControl && (
-            <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button onClick={createRoom} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
-                🔗 Create Sync Room
+            <>
+              <button onClick={() => setSettings(s => ({ ...s, voiceAnnouncements: !s.voiceAnnouncements }))} style={{ padding: '0.75rem', borderRadius: '9999px', background: settings.voiceAnnouncements ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)', border: 'none' }}>
+                {settings.voiceAnnouncements ? <Icons.Mic /> : <Icons.MicOff />}
               </button>
-              <button onClick={() => setShowJoinModal(true)} style={{ padding: '0.75rem 1.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>
-                Join Existing Room
-              </button>
-            </div>
-          )}
-
-          {/* Settings Modal */}
-          {showSettings && (
-            <div onClick={() => setShowSettings(false)} className="modal-backdrop">
-              <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '36rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'white' }}>Settings</h2>
-                  <button onClick={() => setShowSettings(false)} style={{ background: 'transparent', border: 'none' }}><Icons.X /></button>
-                </div>
-                
-                {/* Tabs */}
-                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1.5rem' }}>
-                  {['timer', 'climbers', 'display', 'integration'].map(tab => (
-                    <button key={tab} className={`tab-btn ${settingsTab === tab ? 'active' : ''}`} onClick={() => setSettingsTab(tab)}>
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Timer Tab */}
-                {settingsTab === 'timer' && (
-                  <>
-                    {/* Presets */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Quick Presets</label>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {Object.entries(PRESETS).map(([key, preset]) => (
-                          <button key={key} onClick={() => applyPreset(key)} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem' }}>
-                            {preset.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Time Settings */}
-                    {[
-                      { label: 'Observation Time', key: 'prepDuration', min: 0, max: 120, step: 5, presets: [0, 30, 60, 120], color: '#7c3aed' },
-                      { label: 'Climb Duration', key: 'climbDuration', min: 60, max: 600, step: 30, presets: [180, 240, 300, 360], color: '#059669' },
-                      { label: 'Transition Duration', key: 'transitionDuration', min: 0, max: 120, step: 5, presets: [0, 15, 30, 45], color: '#d97706' },
-                    ].map(({ label, key, min, max, step, presets, color }) => (
-                      <div key={key} style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>{label}</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <input type="range" min={min} max={max} step={step} value={settings[key]} onChange={(e) => setSettings(s => ({ ...s, [key]: parseInt(e.target.value) }))} style={{ flex: 1 }} />
-                          <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.25rem', width: '4rem', textAlign: 'right' }}>{settings[key] === 0 ? 'None' : formatTime(settings[key])}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                          {presets.map(t => (
-                            <button key={t} onClick={() => setSettings(s => ({ ...s, [key]: t }))} style={{ padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: 'none', background: settings[key] === t ? color : 'rgba(255,255,255,0.1)', color: 'white' }}>
-                              {t === 0 ? 'None' : formatTime(t)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {/* Warning Time */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Warning Beep At</label>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {[30, 60, 90, 120].map(t => (
-                          <button key={t} onClick={() => setSettings(s => ({ ...s, warningTime: t }))} style={{ padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: 'none', background: settings.warningTime === t ? '#3b82f6' : 'rgba(255,255,255,0.1)', color: 'white' }}>
-                            {formatTime(t)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Auto-advance */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                      <label style={{ color: 'rgba(255,255,255,0.8)' }}>Auto-advance phases</label>
-                      <Toggle value={settings.enableAutoTransition} onChange={v => setSettings(s => ({ ...s, enableAutoTransition: v }))} />
-                    </div>
-                  </>
-                )}
-                
-                {/* Climbers Tab */}
-                {settingsTab === 'climbers' && (
-                  <>
-                    {/* Current Climber */}
-                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
-                      <h3 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1rem' }}>Current Climber</h3>
-                      <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <input type="text" placeholder="#" value={climberInfo.number} onChange={e => setClimberInfo(p => ({ ...p, number: e.target.value }))} style={{ width: '60px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
-                        <input type="text" placeholder="Name" value={climberInfo.name} onChange={e => setClimberInfo(p => ({ ...p, name: e.target.value }))} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
-                      </div>
-                    </div>
-                    
-                    {/* Climber Queue */}
-                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <h3 style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }}>Queue ({climberQueue.length})</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <input type="file" ref={fileInputRef} accept=".csv,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
-                          <button onClick={() => fileInputRef.current?.click()} style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <Icons.Upload /> CSV
-                          </button>
-                          <button onClick={() => setClimberQueue([...climberQueue, { name: '', number: '' }])} style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.8rem' }}>+ Add</button>
-                        </div>
-                      </div>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {climberQueue.map((c, i) => (
-                          <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <input type="text" placeholder="#" value={c.number} onChange={e => { const q = [...climberQueue]; q[i].number = e.target.value; setClimberQueue(q); }} style={{ width: '50px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: 'white', fontSize: '0.875rem' }} />
-                            <input type="text" placeholder="Name" value={c.name} onChange={e => { const q = [...climberQueue]; q[i].name = e.target.value; setClimberQueue(q); }} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: 'white', fontSize: '0.875rem' }} />
-                            <button onClick={() => setClimberQueue(climberQueue.filter((_, j) => j !== i))} style={{ padding: '0.5rem', background: 'rgba(239,68,68,0.3)', border: 'none', borderRadius: '0.5rem', color: 'white' }}>×</button>
-                          </div>
-                        ))}
-                      </div>
-                      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: '0.5rem' }}>CSV format: number, name (one per line)</p>
-                    </div>
-                    
-                    {/* Category */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Category / Division</label>
-                      <input type="text" placeholder="e.g., Open Male, Youth D Female" value={settings.category} onChange={e => setSettings(s => ({ ...s, category: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
-                    </div>
-                  </>
-                )}
-                
-                {/* Display Tab */}
-                {settingsTab === 'display' && (
-                  <>
-                    {/* Competition Name */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Competition Name</label>
-                      <input type="text" value={settings.compName} onChange={e => setSettings(s => ({ ...s, compName: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
-                    </div>
-                    
-                    {/* Toggles */}
-                    {[
-                      { label: 'Show clock', key: 'showClock' },
-                      { label: 'Show scoring (attempts/tops/zones)', key: 'showScoring' },
-                      { label: 'Show boulder number', key: 'showBoulderNumber', disabled: !settings.showScoring },
-                      { label: 'Voice announcements', key: 'voiceAnnouncements' },
-                    ].map(({ label, key, disabled }) => (
-                      <div key={key} style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <label style={{ color: disabled ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.8)' }}>{label}</label>
-                        <Toggle value={settings[key]} onChange={v => setSettings(s => ({ ...s, [key]: v }))} disabled={disabled} />
-                      </div>
-                    ))}
-                    
-                    {/* Intermission Message */}
-                    <div style={{ marginTop: '1.5rem' }}>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Intermission Message</label>
-                      <input type="text" value={intermission.message} onChange={e => setIntermission(i => ({ ...i, message: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
-                    </div>
-                  </>
-                )}
-                
-                {/* Integration Tab */}
-                {settingsTab === 'integration' && (
-                  <>
-                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                      <h3 style={{ color: 'white', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Icons.Trophy /> Griptonite Integration
-                      </h3>
-                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-                        Link to your Griptonite event page for live results. The link will appear during intermissions and be accessible via the trophy button.
-                      </p>
-                      <input type="url" placeholder="https://griptonite.io/events/your-event" value={settings.griptoniteUrl} onChange={e => setSettings(s => ({ ...s, griptoniteUrl: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white', fontSize: '0.875rem' }} />
-                      {settings.griptoniteUrl && (
-                        <a href={settings.griptoniteUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#60a5fa', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                          Open results page <Icons.ExternalLink />
-                        </a>
-                      )}
-                    </div>
-                    
-                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
-                      <h3 style={{ color: 'white', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Icons.Download /> Export Results
-                      </h3>
-                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-                        Export current climber's scoring data to CSV.
-                      </p>
-                      <button onClick={exportResults} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.5rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Icons.Download /> Export CSV
-                      </button>
-                    </div>
-                  </>
-                )}
-                
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                  <button onClick={() => setShowSettings(false)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Done</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* QR Modal */}
-          {showQR && (
-            <div onClick={() => setShowQR(false)} className="modal-backdrop">
-              <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '28rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Sync Displays</h2>
-                {!roomCode ? (
-                  <div style={{ marginTop: '1rem' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem' }}>Create a sync room to connect multiple displays.</p>
-                    <button onClick={createRoom} style={{ width: '100%', padding: '1rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '1.125rem', fontWeight: '600' }}>Create Sync Room</button>
-                  </div>
-                ) : (
-                  <>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem' }}>Scan QR or share the room code.</p>
-                    <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>Room Code</div>
-                      <div style={{ color: 'white', fontSize: '2rem', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '0.2em' }}>{roomCode}</div>
-                      <div style={{ color: connected ? '#34d399' : '#f87171', fontSize: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                        <Icons.Sync /> {connected ? `Connected${peerCount > 0 ? ` • ${peerCount} display${peerCount > 1 ? 's' : ''}` : ''}` : 'Connecting...'}
-                      </div>
-                    </div>
-                    {isHost && (
-                      <>
-                        <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                          <QRCodeCanvas value={getSyncUrl()} size={200} />
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <input type="text" value={getSyncUrl()} readOnly style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white', fontSize: '0.75rem', fontFamily: 'monospace' }} />
-                          <button onClick={() => copyToClipboard(getSyncUrl())} style={{ padding: '0.75rem', background: '#059669', border: 'none', borderRadius: '0.5rem' }}>
-                            {copied ? <Icons.Check /> : <Icons.Copy />}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowQR(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Close</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Join Modal */}
-          {showJoinModal && (
-            <div onClick={() => setShowJoinModal(false)} className="modal-backdrop">
-              <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '24rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Join Room</h2>
-                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Enter the 6-character room code</p>
-                <input type="text" value={joinRoomInput} onChange={(e) => setJoinRoomInput(e.target.value.toUpperCase().slice(0, 6))} placeholder="ABCDEF" maxLength={6} style={{ width: '100%', background: '#334155', border: 'none', borderRadius: '0.75rem', padding: '1rem', color: 'white', fontFamily: 'monospace', fontSize: '1.5rem', textAlign: 'center', letterSpacing: '0.2em' }} autoFocus />
-                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowJoinModal(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Cancel</button>
-                  <button onClick={joinRoom} disabled={joinRoomInput.length !== 6} style={{ padding: '0.75rem 1.5rem', background: joinRoomInput.length === 6 ? '#059669' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', opacity: joinRoomInput.length === 6 ? 1 : 0.5 }}>Join</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Shortcuts Modal */}
-          {showShortcuts && (
-            <div onClick={() => setShowShortcuts(false)} className="modal-backdrop">
-              <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '28rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '1.5rem' }}>⌨️ Keyboard Shortcuts</h2>
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  {[
-                    ['Space', 'Start / Pause'],
-                    ['S', 'Skip to next phase'],
-                    ['R', 'Reset timer'],
-                    ['M', 'Toggle sound'],
-                    ['F', 'Toggle fullscreen'],
-                    ['N', 'Next climber from queue'],
-                    ['A', 'Add attempt (+1)'],
-                    ['T', 'Add top (+1)'],
-                    ['Z', 'Add zone (+1)'],
-                    ['B', 'Next boulder'],
-                    ['I', 'Start intermission'],
-                    ['L', 'Toggle leaderboard overlay'],
-                    ['P', 'Cycle leaderboard position'],
-                    ['[ / ]', 'Resize leaderboard'],
-                    ['↑ / ↓', 'Add/subtract 5 seconds'],
-                    ['?', 'Show shortcuts'],
-                    ['Esc', 'Close modals/overlay'],
-                  ].map(([key, desc]) => (
-                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>{desc}</span>
-                      <span className="kbd">{key}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowShortcuts(false)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Got it!</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Leaderboard Overlay */}
-          {showLeaderboard && settings.griptoniteUrl && (
-            <div style={{
-              position: 'fixed',
-              ...(leaderboardSettings.position === 'top-left' && { top: '1rem', left: '1rem' }),
-              ...(leaderboardSettings.position === 'top-right' && { top: '1rem', right: '1rem' }),
-              ...(leaderboardSettings.position === 'bottom-left' && { bottom: '1rem', left: '1rem' }),
-              ...(leaderboardSettings.position === 'bottom-right' && { bottom: '1rem', right: '1rem' }),
-              ...(leaderboardSettings.position === 'bottom-bar' && { bottom: 0, left: 0, right: 0 }),
-              // Width: full for bottom-bar, otherwise based on size
-              width: leaderboardSettings.position === 'bottom-bar' 
-                ? '100%' 
-                : (leaderboardSettings.size === 'small' ? '320px' : leaderboardSettings.size === 'medium' ? '480px' : '640px'),
-              // Height: barHeight for bottom-bar, otherwise based on size
-              height: leaderboardSettings.position === 'bottom-bar'
-                ? `${leaderboardSettings.barHeight}px`
-                : (leaderboardSettings.size === 'small' ? '400px' : leaderboardSettings.size === 'medium' ? '600px' : '800px'),
-              maxWidth: leaderboardSettings.position === 'bottom-bar' ? '100%' : '95vw',
-              maxHeight: leaderboardSettings.position === 'bottom-bar' ? '50vh' : '85vh',
-              zIndex: 40,
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: leaderboardSettings.position === 'bottom-bar' ? '1rem 1rem 0 0' : '1rem',
-              overflow: 'hidden',
-              boxShadow: '0 -10px 50px -12px rgba(0, 0, 0, 0.5)',
-              opacity: leaderboardSettings.opacity,
-              animation: 'slideIn 0.2s ease-out',
-            }}>
-              {/* Overlay Header */}
-              <div style={{ 
-                background: '#1e293b', 
-                padding: '0.5rem 1rem', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                borderBottom: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                <span style={{ color: 'white', fontWeight: '600', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Icons.Trophy /> Live Results
-                </span>
-                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                  {canControl && (
-                    <>
-                      {/* Position buttons */}
-                      {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(pos => (
-                        <button key={pos} onClick={() => setLeaderboardSettings(s => ({ ...s, position: pos }))}
-                          style={{ 
-                            width: '1.5rem', height: '1.5rem', 
-                            background: leaderboardSettings.position === pos ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
-                            border: 'none', borderRadius: '0.25rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.6rem', color: 'white'
-                          }}
-                          title={pos.replace('-', ' ')}>
-                          {pos === 'top-left' ? '↖' : pos === 'top-right' ? '↗' : pos === 'bottom-left' ? '↙' : '↘'}
-                        </button>
-                      ))}
-                      {/* Bottom bar button */}
-                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar' }))}
-                        style={{ 
-                          padding: '0.25rem 0.5rem', 
-                          background: leaderboardSettings.position === 'bottom-bar' ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
-                          border: 'none', borderRadius: '0.25rem',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '0.6rem', color: 'white'
-                        }}
-                        title="Full width bottom bar">
-                        ▂▂
-                      </button>
-                      <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
-                      {/* Size buttons - hidden in bottom-bar mode */}
-                      {leaderboardSettings.position !== 'bottom-bar' && ['small', 'medium', 'large'].map(size => (
-                        <button key={size} onClick={() => setLeaderboardSettings(s => ({ ...s, size }))}
-                          style={{ 
-                            padding: '0.25rem 0.5rem',
-                            background: leaderboardSettings.size === size ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
-                            border: 'none', borderRadius: '0.25rem',
-                            fontSize: '0.65rem', color: 'white', textTransform: 'uppercase'
-                          }}>
-                          {size[0]}
-                        </button>
-                      ))}
-                      {/* Height slider for bottom-bar mode */}
-                      {leaderboardSettings.position === 'bottom-bar' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>H:</span>
-                          <input type="range" min="150" max="500" step="25" value={leaderboardSettings.barHeight}
-                            onChange={e => setLeaderboardSettings(s => ({ ...s, barHeight: parseInt(e.target.value) }))}
-                            style={{ width: '60px', height: '4px' }} />
-                          <span style={{ color: 'white', fontSize: '0.6rem', width: '2rem' }}>{leaderboardSettings.barHeight}</span>
-                        </div>
-                      )}
-                      <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
-                      {/* Crop/pan button */}
-                      <button onClick={() => setShowCropControls(s => !s)}
-                        style={{ 
-                          padding: '0.25rem 0.5rem',
-                          background: showCropControls ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
-                          border: 'none', borderRadius: '0.25rem',
-                          color: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem',
-                          fontSize: '0.65rem'
-                        }}
-                        title="Crop & pan view">
-                        <Icons.Crop /> Crop
-                      </button>
-                    </>
-                  )}
-                  {/* External link */}
-                  <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
-                    style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}
-                    title="Open in new tab">
-                    <Icons.ExternalLink />
-                  </button>
-                  {/* Close button - only for host */}
-                  {canControl && (
-                    <button onClick={() => setShowLeaderboard(false)}
-                      style={{ padding: '0.25rem', background: 'rgba(239,68,68,0.3)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}>
-                      <Icons.X />
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              {/* Crop Controls Panel */}
-              {showCropControls && canControl && (
-                <div style={{ 
-                  background: '#1e293b', 
-                  padding: '0.75rem 1rem', 
-                  borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                    Adjust to show just the scores section
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Zoom:</span>
-                      <input type="range" min="100" max="300" step="10" value={leaderboardSettings.zoom} 
-                        onChange={e => setLeaderboardSettings(s => ({ ...s, zoom: parseInt(e.target.value) }))}
-                        style={{ flex: 1, height: '4px' }} />
-                      <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.zoom}%</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Pan X:</span>
-                      <input type="range" min="0" max="1500" step="10" value={leaderboardSettings.offsetX} 
-                        onChange={e => setLeaderboardSettings(s => ({ ...s, offsetX: parseInt(e.target.value) }))}
-                        style={{ flex: 1, height: '4px' }} />
-                      <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.offsetX}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Pan Y:</span>
-                      <input type="range" min="0" max="3000" step="10" value={leaderboardSettings.offsetY} 
-                        onChange={e => setLeaderboardSettings(s => ({ ...s, offsetY: parseInt(e.target.value) }))}
-                        style={{ flex: 1, height: '4px' }} />
-                      <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.offsetY}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {/* Quick presets for common Griptonite layouts */}
-                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 400, zoom: 150 }))}
-                        style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
-                        Scores Only
-                      </button>
-                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 300, zoom: 120 }))}
-                        style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
-                        Leaderboard
-                      </button>
-                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar', offsetX: 0, offsetY: 350, zoom: 100, barHeight: 250 }))}
-                        style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
-                        Wide Bar
-                      </button>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 0, zoom: 100 }))}
-                        style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.7rem' }}>
-                        Reset
-                      </button>
-                      <button onClick={() => setShowCropControls(false)}
-                        style={{ padding: '0.25rem 0.75rem', background: '#3b82f6', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.7rem' }}>
-                        Done
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Iframe with crop applied - scales up and pans to show specific region */}
-              <div style={{ flex: 1, background: 'white', position: 'relative', overflow: 'hidden' }}>
-                <iframe 
-                  src={settings.griptoniteUrl}
-                  style={{ 
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: `${leaderboardSettings.zoom}%`,
-                    height: `${leaderboardSettings.zoom}%`,
-                    border: 'none',
-                    transform: `translate(-${leaderboardSettings.offsetX}px, -${leaderboardSettings.offsetY}px)`,
-                    transformOrigin: 'top left',
-                  }}
-                  title="Griptonite Leaderboard"
-                  sandbox="allow-scripts allow-same-origin allow-popups"
-                />
-                {/* Fallback message if iframe is blocked */}
-                <div style={{ 
-                  position: 'absolute', 
-                  inset: 0, 
-                  background: '#1e293b', 
-                  display: 'none',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '2rem',
-                  textAlign: 'center'
-                }}>
+              {settings.griptoniteUrl && (
+                <button onClick={() => setShowLeaderboard(s => !s)} style={{ padding: '0.75rem', borderRadius: '9999px', background: showLeaderboard ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)', border: 'none' }} title="Toggle leaderboard overlay (L)">
                   <Icons.Trophy />
-                  <p style={{ color: 'white', marginTop: '1rem', marginBottom: '0.5rem' }}>Unable to embed results page</p>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>The site may block embedding. Click below to open in a new tab.</p>
-                  <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
-                    style={{ padding: '0.75rem 1.5rem', background: '#3b82f6', border: 'none', borderRadius: '0.5rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    Open Results <Icons.ExternalLink />
-                  </button>
-                </div>
-              </div>
+                </button>
+              )}
+              <button onClick={() => setShowShortcuts(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
+                <Icons.Keyboard />
+              </button>
+            </>
+          )}
+          <button onClick={toggleFullscreen} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
+            <Icons.Fullscreen />
+          </button>
+          {canControl && (
+            <>
+              <button onClick={() => setShowSettings(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
+                <Icons.Settings />
+              </button>
+              <button onClick={() => setShowQR(true)} style={{ padding: '0.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.1)', border: 'none' }}>
+                <Icons.QR />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Main Display */}
+      <div style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', color: 'rgba(255,255,255,0.95)' }}>{getPhaseLabel()}</div>
+
+      <div className="tabular-nums" style={{ fontSize: 'clamp(6rem, 28vw, 16rem)', fontFamily: 'ui-monospace, monospace', fontWeight: 'bold', color: getTimeColor(), lineHeight: 1, animation: timerState.timeRemaining <= 3 && timerState.timeRemaining > 0 && timerState.phase !== 'idle' ? 'pulse 1s infinite' : 'none' }}>
+        {formatTime(timerState.timeRemaining)}
+      </div>
+
+      <div style={{ marginTop: '0.5rem', color: 'rgba(255,255,255,0.6)', fontSize: '1.125rem', textAlign: 'center' }}>
+        {timerState.phase === 'idle' && `${settings.prepDuration > 0 ? formatTime(settings.prepDuration) + ' obs • ' : ''}${formatTime(settings.climbDuration)} climb${settings.transitionDuration > 0 ? ' • ' + formatTime(settings.transitionDuration) + ' transition' : ''}`}
+        {timerState.phase === 'prep' && 'Climber may observe the wall'}
+        {timerState.phase === 'climb' && (settings.transitionDuration > 0 ? 'Transition begins when timer ends' : 'Next round begins when timer ends')}
+        {timerState.phase === 'transition' && `Round ${timerState.round + 1} starts when timer ends`}
+      </div>
+
+      {/* Controls */}
+      {canControl && (
+        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.75rem' }}>
+            {!timerState.isRunning ? (
+              <button onClick={handleStart} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
+                <Icons.Play /> {timerState.phase === 'idle' ? 'Start' : 'Resume'}
+              </button>
+            ) : (
+              <button onClick={handlePause} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 2.5rem', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.5rem', fontWeight: '600' }}>
+                <Icons.Pause /> Pause
+              </button>
+            )}
+            {timerState.phase !== 'idle' && (
+              <>
+                <button onClick={handleSkip} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem' }}>
+                  <Icons.Skip /> Skip
+                </button>
+                <button onClick={handleReset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '1rem', color: 'white', fontSize: '1.25rem' }}>
+                  <Icons.Reset /> Reset
+                </button>
+              </>
+            )}
+          </div>
+          
+          {timerState.phase !== 'idle' && (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {[-10, -5, 5, 10].map(s => (
+                <button key={s} onClick={() => handleAddTime(s)} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem' }}>
+                  {s > 0 ? '+' : ''}{s}s
+                </button>
+              ))}
             </div>
           )}
-
-          {/* Footer */}
-          <div style={{ position: 'absolute', bottom: '0.75rem', color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span>{settings.compName}</span>
-            {isLocked && <span style={{ color: 'rgba(34,197,94,0.5)' }}>🔒 Screen lock</span>}
+          
+          {/* Quick Actions */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {climberQueue.length > 0 && (
+              <button onClick={nextClimber} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
+                Next: {climberQueue[0]?.name || 'Unknown'} →
+              </button>
+            )}
+            {settings.showScoring && settings.showBoulderNumber && (
+              <button onClick={() => setBoulderNumber(b => b + 1)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
+                Boulder {boulderNumber} → {boulderNumber + 1}
+              </button>
+            )}
+            <button onClick={() => setIntermission(i => ({ ...i, active: true }))} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
+              ☕ Intermission
+            </button>
           </div>
         </div>
-      );
-    }
+      )}
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<ClimbingTimer />);
+      {/* Room Creation */}
+      {!roomCode && timerState.phase === 'idle' && canControl && (
+        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={createRoom} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', color: 'white', fontSize: '0.875rem' }}>
+            🔗 Create Sync Room
+          </button>
+          <button onClick={() => setShowJoinModal(true)} style={{ padding: '0.75rem 1.5rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }}>
+            Join Existing Room
+          </button>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div onClick={() => setShowSettings(false)} className="modal-backdrop">
+          <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '36rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'white' }}>Settings</h2>
+              <button onClick={() => setShowSettings(false)} style={{ background: 'transparent', border: 'none' }}><Icons.X /></button>
+            </div>
+            
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '1.5rem' }}>
+              {['timer', 'climbers', 'display', 'integration'].map(tab => (
+                <button key={tab} className={`tab-btn ${settingsTab === tab ? 'active' : ''}`} onClick={() => setSettingsTab(tab)}>
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+            
+            {/* Timer Tab */}
+            {settingsTab === 'timer' && (
+              <>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Quick Presets</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {Object.entries(PRESETS).map(([key, preset]) => (
+                      <button key={key} onClick={() => applyPreset(key)} style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', color: 'white', fontSize: '0.875rem' }}>
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {[
+                  { label: 'Observation Time', key: 'prepDuration', min: 0, max: 120, step: 5, presets: [0, 30, 60, 120], color: '#7c3aed' },
+                  { label: 'Climb Duration', key: 'climbDuration', min: 60, max: 600, step: 30, presets: [180, 240, 300, 360], color: '#059669' },
+                  { label: 'Transition Duration', key: 'transitionDuration', min: 0, max: 120, step: 5, presets: [0, 15, 30, 45], color: '#d97706' },
+                ].map(({ label, key, min, max, step, presets, color }) => (
+                  <div key={key} style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>{label}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <input type="range" min={min} max={max} step={step} value={settings[key]} onChange={(e) => setSettings(s => ({ ...s, [key]: parseInt(e.target.value) }))} style={{ flex: 1 }} />
+                      <span style={{ color: 'white', fontFamily: 'monospace', fontSize: '1.25rem', width: '4rem', textAlign: 'right' }}>{settings[key] === 0 ? 'None' : formatTime(settings[key])}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                      {presets.map(t => (
+                        <button key={t} onClick={() => setSettings(s => ({ ...s, [key]: t }))} style={{ padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: 'none', background: settings[key] === t ? color : 'rgba(255,255,255,0.1)', color: 'white' }}>
+                          {t === 0 ? 'None' : formatTime(t)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Warning Beep At</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[30, 60, 90, 120].map(t => (
+                      <button key={t} onClick={() => setSettings(s => ({ ...s, warningTime: t }))} style={{ padding: '0.4rem 0.8rem', borderRadius: '0.5rem', fontSize: '0.8rem', border: 'none', background: settings.warningTime === t ? '#3b82f6' : 'rgba(255,255,255,0.1)', color: 'white' }}>
+                        {formatTime(t)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <label style={{ color: 'rgba(255,255,255,0.8)' }}>Auto-advance phases</label>
+                  <Toggle value={settings.enableAutoTransition} onChange={v => setSettings(s => ({ ...s, enableAutoTransition: v }))} />
+                </div>
+              </>
+            )}
+            
+            {/* Climbers Tab */}
+            {settingsTab === 'climbers' && (
+              <>
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
+                  <h3 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.75rem', fontSize: '1rem' }}>Current Climber</h3>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <input type="text" placeholder="#" value={climberInfo.number} onChange={e => setClimberInfo(p => ({ ...p, number: e.target.value }))} style={{ width: '60px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
+                    <input type="text" placeholder="Name" value={climberInfo.name} onChange={e => setClimberInfo(p => ({ ...p, name: e.target.value }))} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <h3 style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }}>Queue ({climberQueue.length})</h3>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input type="file" ref={fileInputRef} accept=".csv,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
+                      <button onClick={() => fileInputRef.current?.click()} style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Icons.Upload /> CSV
+                      </button>
+                      <button onClick={() => setClimberQueue([...climberQueue, { name: '', number: '' }])} style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.8rem' }}>+ Add</button>
+                    </div>
+                  </div>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    {climberQueue.map((c, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <input type="text" placeholder="#" value={c.number} onChange={e => { const q = [...climberQueue]; q[i].number = e.target.value; setClimberQueue(q); }} style={{ width: '50px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: 'white', fontSize: '0.875rem' }} />
+                        <input type="text" placeholder="Name" value={c.name} onChange={e => { const q = [...climberQueue]; q[i].name = e.target.value; setClimberQueue(q); }} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: 'white', fontSize: '0.875rem' }} />
+                        <button onClick={() => setClimberQueue(climberQueue.filter((_, j) => j !== i))} style={{ padding: '0.5rem', background: 'rgba(239,68,68,0.3)', border: 'none', borderRadius: '0.5rem', color: 'white' }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: '0.5rem' }}>CSV format: number, name (one per line)</p>
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Category / Division</label>
+                  <input type="text" placeholder="e.g., Open Male, Youth D Female" value={settings.category} onChange={e => setSettings(s => ({ ...s, category: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
+                </div>
+              </>
+            )}
+            
+            {/* Display Tab */}
+            {settingsTab === 'display' && (
+              <>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Competition Name</label>
+                  <input type="text" value={settings.compName} onChange={e => setSettings(s => ({ ...s, compName: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
+                </div>
+                
+                {[
+                  { label: 'Show clock', key: 'showClock' },
+                  { label: 'Show scoring (attempts/tops/zones)', key: 'showScoring' },
+                  { label: 'Show boulder number', key: 'showBoulderNumber', disabled: !settings.showScoring },
+                  { label: 'Voice announcements', key: 'voiceAnnouncements' },
+                ].map(({ label, key, disabled }) => (
+                  <div key={key} style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ color: disabled ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.8)' }}>{label}</label>
+                    <Toggle value={settings[key]} onChange={v => setSettings(s => ({ ...s, [key]: v }))} disabled={disabled} />
+                  </div>
+                ))}
+                
+                <div style={{ marginTop: '1.5rem' }}>
+                  <label style={{ display: 'block', color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem' }}>Intermission Message</label>
+                  <input type="text" value={intermission.message} onChange={e => setIntermission(i => ({ ...i, message: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white' }} />
+                </div>
+              </>
+            )}
+            
+            {/* Integration Tab */}
+            {settingsTab === 'integration' && (
+              <>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                  <h3 style={{ color: 'white', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Icons.Trophy /> Griptonite Integration
+                  </h3>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    Link to your Griptonite event page for live results. The link will appear during intermissions and be accessible via the trophy button.
+                  </p>
+                  <input type="url" placeholder="https://griptonite.io/events/your-event" value={settings.griptoniteUrl} onChange={e => setSettings(s => ({ ...s, griptoniteUrl: e.target.value }))} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white', fontSize: '0.875rem' }} />
+                  {settings.griptoniteUrl && (
+                    <a href={settings.griptoniteUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#60a5fa', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                      Open results page <Icons.ExternalLink />
+                    </a>
+                  )}
+                </div>
+                
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem' }}>
+                  <h3 style={{ color: 'white', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Icons.Download /> Export Results
+                  </h3>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    Export current climber's scoring data to CSV.
+                  </p>
+                  <button onClick={exportResults} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.5rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Icons.Download /> Export CSV
+                  </button>
+                </div>
+              </>
+            )}
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button onClick={() => setShowSettings(false)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Modal */}
+      {showQR && (
+        <div onClick={() => setShowQR(false)} className="modal-backdrop">
+          <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '28rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Sync Displays</h2>
+            {!roomCode ? (
+              <div style={{ marginTop: '1rem' }}>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem' }}>Create a sync room to connect multiple displays.</p>
+                <button onClick={createRoom} style={{ width: '100%', padding: '1rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontSize: '1.125rem', fontWeight: '600' }}>Create Sync Room</button>
+              </div>
+            ) : (
+              <>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem' }}>Scan QR or share the room code.</p>
+                <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem', textAlign: 'center' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>Room Code</div>
+                  <div style={{ color: 'white', fontSize: '2rem', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '0.2em' }}>{roomCode}</div>
+                  <div style={{ color: connected ? '#34d399' : '#f87171', fontSize: '0.875rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                    <Icons.Sync /> {connected ? `Connected${peerCount > 0 ? ` • ${peerCount} display${peerCount > 1 ? 's' : ''}` : ''}` : 'Connecting...'}
+                  </div>
+                </div>
+                {isHost && (
+                  <>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '1rem', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                      <QRCodeCanvas value={getSyncUrl()} size={200} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input type="text" value={getSyncUrl()} readOnly style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.75rem', color: 'white', fontSize: '0.75rem', fontFamily: 'monospace' }} />
+                      <button onClick={() => copyToClipboard(getSyncUrl())} style={{ padding: '0.75rem', background: '#059669', border: 'none', borderRadius: '0.5rem' }}>
+                        {copied ? <Icons.Check /> : <Icons.Copy />}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowQR(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Join Modal */}
+      {showJoinModal && (
+        <div onClick={() => setShowJoinModal(false)} className="modal-backdrop">
+          <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '24rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>Join Room</h2>
+            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Enter the 6-character room code</p>
+            <input type="text" value={joinRoomInput} onChange={(e) => setJoinRoomInput(e.target.value.toUpperCase().slice(0, 6))} placeholder="ABCDEF" maxLength={6} style={{ width: '100%', background: '#334155', border: 'none', borderRadius: '0.75rem', padding: '1rem', color: 'white', fontFamily: 'monospace', fontSize: '1.5rem', textAlign: 'center', letterSpacing: '0.2em' }} autoFocus />
+            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowJoinModal(false)} style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Cancel</button>
+              <button onClick={joinRoom} disabled={joinRoomInput.length !== 6} style={{ padding: '0.75rem 1.5rem', background: joinRoomInput.length === 6 ? '#059669' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600', opacity: joinRoomInput.length === 6 ? 1 : 0.5 }}>Join</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shortcuts Modal */}
+      {showShortcuts && (
+        <div onClick={() => setShowShortcuts(false)} className="modal-backdrop">
+          <div onClick={e => e.stopPropagation()} className="modal-content" style={{ maxWidth: '28rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '1.5rem' }}>⌨️ Keyboard Shortcuts</h2>
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              {[
+                ['Space', 'Start / Pause'],
+                ['S', 'Skip to next phase'],
+                ['R', 'Reset timer'],
+                ['M', 'Toggle sound'],
+                ['F', 'Toggle fullscreen'],
+                ['N', 'Next climber from queue'],
+                ['A', 'Add attempt (+1)'],
+                ['T', 'Add top (+1)'],
+                ['Z', 'Add zone (+1)'],
+                ['B', 'Next boulder'],
+                ['I', 'Start intermission'],
+                ['L', 'Toggle leaderboard overlay'],
+                ['P', 'Cycle leaderboard position'],
+                ['[ / ]', 'Resize leaderboard'],
+                ['↑ / ↓', 'Add/subtract 5 seconds'],
+                ['?', 'Show shortcuts'],
+                ['Esc', 'Close modals/overlay'],
+              ].map(([key, desc]) => (
+                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.8)' }}>{desc}</span>
+                  <span className="kbd">{key}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowShortcuts(false)} style={{ padding: '0.75rem 1.5rem', background: '#059669', border: 'none', borderRadius: '0.75rem', color: 'white', fontWeight: '600' }}>Got it!</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard Overlay */}
+      {showLeaderboard && settings.griptoniteUrl && (
+        <div style={{
+          position: 'fixed',
+          ...(leaderboardSettings.position === 'top-left' && { top: '1rem', left: '1rem' }),
+          ...(leaderboardSettings.position === 'top-right' && { top: '1rem', right: '1rem' }),
+          ...(leaderboardSettings.position === 'bottom-left' && { bottom: '1rem', left: '1rem' }),
+          ...(leaderboardSettings.position === 'bottom-right' && { bottom: '1rem', right: '1rem' }),
+          ...(leaderboardSettings.position === 'bottom-bar' && { bottom: 0, left: 0, right: 0 }),
+          width: leaderboardSettings.position === 'bottom-bar' 
+            ? '100%' 
+            : (leaderboardSettings.size === 'small' ? '320px' : leaderboardSettings.size === 'medium' ? '480px' : '640px'),
+          height: leaderboardSettings.position === 'bottom-bar'
+            ? `${leaderboardSettings.barHeight}px`
+            : (leaderboardSettings.size === 'small' ? '400px' : leaderboardSettings.size === 'medium' ? '600px' : '800px'),
+          maxWidth: leaderboardSettings.position === 'bottom-bar' ? '100%' : '95vw',
+          maxHeight: leaderboardSettings.position === 'bottom-bar' ? '50vh' : '85vh',
+          zIndex: 40,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: leaderboardSettings.position === 'bottom-bar' ? '1rem 1rem 0 0' : '1rem',
+          overflow: 'hidden',
+          boxShadow: '0 -10px 50px -12px rgba(0, 0, 0, 0.5)',
+          opacity: leaderboardSettings.opacity,
+          animation: 'slideIn 0.2s ease-out',
+        }}>
+          <div style={{ 
+            background: '#1e293b', 
+            padding: '0.5rem 1rem', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <span style={{ color: 'white', fontWeight: '600', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Icons.Trophy /> Live Results
+            </span>
+            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+              {canControl && (
+                <>
+                  {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(pos => (
+                    <button key={pos} onClick={() => setLeaderboardSettings(s => ({ ...s, position: pos }))}
+                      style={{ 
+                        width: '1.5rem', height: '1.5rem', 
+                        background: leaderboardSettings.position === pos ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                        border: 'none', borderRadius: '0.25rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.6rem', color: 'white'
+                      }}
+                      title={pos.replace('-', ' ')}>
+                      {pos === 'top-left' ? '↖' : pos === 'top-right' ? '↗' : pos === 'bottom-left' ? '↙' : '↘'}
+                    </button>
+                  ))}
+                  <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar' }))}
+                    style={{ 
+                      padding: '0.25rem 0.5rem', 
+                      background: leaderboardSettings.position === 'bottom-bar' ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                      border: 'none', borderRadius: '0.25rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.6rem', color: 'white'
+                    }}
+                    title="Full width bottom bar">
+                    ▂▂
+                  </button>
+                  <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
+                  {leaderboardSettings.position !== 'bottom-bar' && ['small', 'medium', 'large'].map(size => (
+                    <button key={size} onClick={() => setLeaderboardSettings(s => ({ ...s, size }))}
+                      style={{ 
+                        padding: '0.25rem 0.5rem',
+                        background: leaderboardSettings.size === size ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                        border: 'none', borderRadius: '0.25rem',
+                        fontSize: '0.65rem', color: 'white', textTransform: 'uppercase'
+                      }}>
+                      {size[0]}
+                    </button>
+                  ))}
+                  {leaderboardSettings.position === 'bottom-bar' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem' }}>H:</span>
+                      <input type="range" min="150" max="500" step="25" value={leaderboardSettings.barHeight}
+                        onChange={e => setLeaderboardSettings(s => ({ ...s, barHeight: parseInt(e.target.value) }))}
+                        style={{ width: '60px', height: '4px' }} />
+                      <span style={{ color: 'white', fontSize: '0.6rem', width: '2rem' }}>{leaderboardSettings.barHeight}</span>
+                    </div>
+                  )}
+                  <div style={{ width: '1px', height: '1rem', background: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }} />
+                  <button onClick={() => setShowCropControls(s => !s)}
+                    style={{ 
+                      padding: '0.25rem 0.5rem',
+                      background: showCropControls ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                      border: 'none', borderRadius: '0.25rem',
+                      color: 'white', display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      fontSize: '0.65rem'
+                    }}
+                    title="Crop & pan view">
+                    <Icons.Crop /> Crop
+                  </button>
+                </>
+              )}
+              <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
+                style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}
+                title="Open in new tab">
+                <Icons.ExternalLink />
+              </button>
+              {canControl && (
+                <button onClick={() => setShowLeaderboard(false)}
+                  style={{ padding: '0.25rem', background: 'rgba(239,68,68,0.3)', border: 'none', borderRadius: '0.25rem', color: 'white', display: 'flex', alignItems: 'center' }}>
+                  <Icons.X />
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {showCropControls && canControl && (
+            <div style={{ 
+              background: '#1e293b', 
+              padding: '0.75rem 1rem', 
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
+                Adjust to show just the scores section
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Zoom:</span>
+                  <input type="range" min="100" max="300" step="10" value={leaderboardSettings.zoom} 
+                    onChange={e => setLeaderboardSettings(s => ({ ...s, zoom: parseInt(e.target.value) }))}
+                    style={{ flex: 1, height: '4px' }} />
+                  <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.zoom}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Pan X:</span>
+                  <input type="range" min="0" max="1500" step="10" value={leaderboardSettings.offsetX} 
+                    onChange={e => setLeaderboardSettings(s => ({ ...s, offsetX: parseInt(e.target.value) }))}
+                    style={{ flex: 1, height: '4px' }} />
+                  <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.offsetX}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '140px' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', width: '2.5rem' }}>Pan Y:</span>
+                  <input type="range" min="0" max="3000" step="10" value={leaderboardSettings.offsetY} 
+                    onChange={e => setLeaderboardSettings(s => ({ ...s, offsetY: parseInt(e.target.value) }))}
+                    style={{ flex: 1, height: '4px' }} />
+                  <span style={{ color: 'white', fontSize: '0.7rem', width: '2.5rem', textAlign: 'right' }}>{leaderboardSettings.offsetY}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 400, zoom: 150 }))}
+                    style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
+                    Scores Only
+                  </button>
+                  <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 300, zoom: 120 }))}
+                    style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
+                    Leaderboard
+                  </button>
+                  <button onClick={() => setLeaderboardSettings(s => ({ ...s, position: 'bottom-bar', offsetX: 0, offsetY: 350, zoom: 100, barHeight: 250 }))}
+                    style={{ padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.65rem' }}>
+                    Wide Bar
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => setLeaderboardSettings(s => ({ ...s, offsetX: 0, offsetY: 0, zoom: 100 }))}
+                    style={{ padding: '0.25rem 0.75rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.7rem' }}>
+                    Reset
+                  </button>
+                  <button onClick={() => setShowCropControls(false)}
+                    style={{ padding: '0.25rem 0.75rem', background: '#3b82f6', border: 'none', borderRadius: '0.25rem', color: 'white', fontSize: '0.7rem' }}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div style={{ flex: 1, background: 'white', position: 'relative', overflow: 'hidden' }}>
+            <iframe 
+              src={settings.griptoniteUrl}
+              style={{ 
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: `${leaderboardSettings.zoom}%`,
+                height: `${leaderboardSettings.zoom}%`,
+                border: 'none',
+                transform: `translate(-${leaderboardSettings.offsetX}px, -${leaderboardSettings.offsetY}px)`,
+                transformOrigin: 'top left',
+              }}
+              title="Griptonite Leaderboard"
+              sandbox="allow-scripts allow-same-origin allow-popups"
+            />
+            <div style={{ 
+              position: 'absolute', 
+              inset: 0, 
+              background: '#1e293b', 
+              display: 'none',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem',
+              textAlign: 'center'
+            }}>
+              <Icons.Trophy />
+              <p style={{ color: 'white', marginTop: '1rem', marginBottom: '0.5rem' }}>Unable to embed results page</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem', marginBottom: '1rem' }}>The site may block embedding. Click below to open in a new tab.</p>
+              <button onClick={() => window.open(settings.griptoniteUrl, '_blank')}
+                style={{ padding: '0.75rem 1.5rem', background: '#3b82f6', border: 'none', borderRadius: '0.5rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Open Results <Icons.ExternalLink />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{ position: 'absolute', bottom: '0.75rem', color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <span>{settings.compName}</span>
+        {isLocked && <span style={{ color: 'rgba(34,197,94,0.5)' }}>🔒 Screen lock</span>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ClimbingTimer />);
+```
+
   </script>
 </body>
 </html>
